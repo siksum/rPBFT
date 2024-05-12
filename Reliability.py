@@ -9,6 +9,7 @@ class rel_data:
     def __init__(self, name, faultrate):
         self.name = name
         self.faultrate = faultrate
+        print(self.name, self.faultrate)
 
 
 # 신뢰성 모델을 활용한 결함 확률 산출

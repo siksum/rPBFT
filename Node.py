@@ -5,6 +5,7 @@ class Node:
     def __init__(self, numberofNodes, reliability): # numberofNodes : 전체 노드 수, a : 증폭, s : 슬라이스
         self.numberofNodes = numberofNodes  # 전체 노드 수
         self.reliability = reliability
+        print("Node reliability: ", reliability)
         self.nodes = [[0 for j in range(10)] for i in range(numberofNodes)]  # 노드[i] & 노드 데이터 리스트[i][j]
 
 

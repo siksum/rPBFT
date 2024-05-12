@@ -1,4 +1,5 @@
 import hashlib
+from PBFT import PBFT
 
 
 class Blockchain:
@@ -13,7 +14,7 @@ class Blockchain:
             # 1. max : 비트코인의 최대 블록 사이즈 4MB (BIP141 : https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#cite_note-3)
             # 2. ave : 비트코인 평균 블록 사이즈 1MB (https://www.blockchain.com/charts/avg-block-size)
             # 3. test : test용 10Bytes
-        self.consensus = consensus  # 합의 알고리즘
+        self.consensus = PBFT  # 합의 알고리즘
 
         self.block = [None]  # 블록(단기 저장)
         self.chain = []  # 블록체인
