@@ -1,21 +1,18 @@
-from Chain.blockchain import Blockchain
-from Chain.node import Node, PBFT
+from blockchain import Blockchain, PBFT
+from node import Node, ClientNode
 import time
 
-class Client:
-    def __init__(self, client_id, pbft):
-        self.client_id = client_id
-        self.pbft = pbft
-
-    def send_request(self, request):
-        self.pbft.broadcast_request(request)
 
 if __name__ == "__main__":
     blockchain = Blockchain()
-    nodes = [Node(i, blockchain) for i in range(4)]
-    pbft = PBFT(nodes)
+    node1 = Node(1, 'localhost', 8000, blockchain)
+    node2 = Node(2, 'localhost', 8001, blockchain)
+    node3 = Node(3, 'localhost', 8002, blockchain)
+
+    pbft = PBFT([node1, node2, node3])
     pbft.initialize_network()
-    client = Client(0, pbft)
+
+    client = ClientNode(0, pbft)
 
     client.send_request("Transaction Data")
     
@@ -23,10 +20,10 @@ if __name__ == "__main__":
 
     for block in blockchain.chain:
         print(f"Block {block.index} [Hash: {block.hash}]")
-    
-    is_valid = all(node.validate_chain() for node in nodes)
+
+    is_valid = blockchain.is_chain_valid()
     print(f"Blockchain valid: {is_valid}")
-    
-    new_node = Node(4, blockchain)
+
+    new_node = Node(4, 'localhost', 8003, blockchain)
     pbft.add_node(new_node)
     print(f"New node {new_node.node_id} added and registered.")

@@ -1,15 +1,27 @@
-import threading
-from Chain.blockchain import Blockchain
+from Chain.network import Server, Client
+
 
 class Node:
-    def __init__(self, node_id, blockchain):
+    def __init__(self, node_id, host, port, blockchain):
         self.node_id = node_id
+        self.host = host
+        self.port = port
         self.blockchain = blockchain
-        self.state = "normal"
+        self.server = Server(host, port, self)
+        self.server.start()
         self.peers = []
 
-    def receive_request(self, request):
-        self.pre_prepare(request)
+    def connect_to_peer(self, host, port):
+        client = Client(host, port)
+        self.peers.append(client)
+
+    def send_message_to_all(self, message):
+        for peer in self.peers:
+            peer.send_message(message)
+
+    def receive_message(self, message):
+        print(f"Node {self.node_id} received message: {message}")
+        self.pre_prepare(message)
 
     def pre_prepare(self, request):
         self.prepare(request)
@@ -20,28 +32,10 @@ class Node:
     def commit(self, request):
         self.blockchain.add_block(request)
 
-    def register_peer(self, peer_node):
-        self.peers.append(peer_node)
+class ClientNode:
+    def __init__(self, client_id, pbft):
+        self.client_id = client_id
+        self.pbft = pbft
 
-    def validate_chain(self):
-        return self.blockchain.is_chain_valid()
-
-class PBFT:
-    def __init__(self, nodes):
-        self.nodes = nodes
-        self.primary_node = nodes[0]
-
-    def broadcast_request(self, request):
-        for node in self.nodes:
-            threading.Thread(target=node.receive_request, args=(request,)).start()
-
-    def add_node(self, node):
-        for n in self.nodes:
-            n.register_peer(node)
-        self.nodes.append(node)
-    
-    def initialize_network(self):
-        for node in self.nodes:
-            for peer in self.nodes:
-                if node.node_id != peer.node_id:
-                    node.register_peer(peer)
+    def send_request(self, request):
+        self.pbft.broadcast_request(request)

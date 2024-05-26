@@ -1,5 +1,6 @@
 import hashlib
 import time
+import threading
 
 class Block:
     def __init__(self, index, previous_hash, timestamp, data, hash):
@@ -43,3 +44,24 @@ class Blockchain:
             if current_block.previous_hash != previous_block.hash:
                 return False
         return True
+
+class PBFT:
+    def __init__(self, nodes):
+        self.nodes = nodes
+        self.primary_node = nodes[0]
+
+    def broadcast_request(self, request):
+        for node in self.nodes:
+            threading.Thread(target=node.receive_message, args=(request,)).start()
+
+    def add_node(self, node):
+        for n in self.nodes:
+            n.connect_to_peer(node.host, node.port)
+            node.connect_to_peer(n.host, n.port)
+        self.nodes.append(node)
+
+    def initialize_network(self):
+        for node in self.nodes:
+            for peer in self.nodes:
+                if node.node_id != peer.node_id:
+                    node.connect_to_peer(peer.host, peer.port)
