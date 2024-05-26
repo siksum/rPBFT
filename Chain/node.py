@@ -1,5 +1,6 @@
 from Chain.network import Server, Client
 
+
 class Node:
     def __init__(self, node_id, host, port, blockchain, consensus_algorithm):
         self.node_id = node_id
@@ -10,6 +11,10 @@ class Node:
         self.server = Server(host, port, self)
         self.server.start()
         self.peers = []
+        self.processed_messages = set()
+        self.pre_prepared_messages = set()
+        self.prepared_messages = set()
+        self.committed_messages = set()
 
     def connect_to_peer(self, host, port):
         client = Client(host, port)
@@ -21,6 +26,7 @@ class Node:
 
     def receive_message(self, message):
         print(f"Node {self.node_id} received message: {message}")
+
         if message.startswith("PREPARE:"):
             self.consensus_algorithm.prepare(message[len("PREPARE:"):], self)
         elif message.startswith("COMMIT:"):
@@ -32,6 +38,7 @@ class Node:
         self.server.stop()
         for peer in self.peers:
             peer.close()
+
 
 
 class ClientNode:

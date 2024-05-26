@@ -17,18 +17,22 @@ class ConsensusAlgorithm(ABC):
 class PBFT(ConsensusAlgorithm):
     def pre_prepare(self, request, node):
         print(f"Node {node.node_id} pre-prepare stage")
+        node.pre_prepared_messages.add(request)
         node.send_message_to_all(f"PREPARE:{request}")
-        self.prepare(request, node)
+        # self.prepare(request, node)
 
     def prepare(self, request, node):
         print(f"Node {node.node_id} prepare stage")
+        node.prepared_messages.add(request)
         node.send_message_to_all(f"COMMIT:{request}")
-        self.commit(request, node)
+        # self.commit(request, node)
 
     def commit(self, request, node):
         print(f"Node {node.node_id} commit stage")
+        node.committed_messages.add(request)
         node.blockchain.add_block(request)
         print(f"Node {node.node_id} added block: {request}")
+
 
 
 class PBFTNetwork:
@@ -37,8 +41,7 @@ class PBFTNetwork:
         self.primary_node = nodes[0]
 
     def broadcast_request(self, request):
-        for node in self.nodes:
-            threading.Thread(target=node.receive_message, args=(request,)).start()
+        self.primary_node.receive_message(request)
 
     def add_node(self, node):
         for n in self.nodes:
@@ -55,3 +58,4 @@ class PBFTNetwork:
     def stop(self):
         for node in self.nodes:
             node.stop()
+

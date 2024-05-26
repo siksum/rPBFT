@@ -1,0 +1,8 @@
+Node 1 received message: Transaction Data
+Node 1 pre-prepare stage
+Node 2 received message: PREPARE:Transaction DataTransaction Data
+Node 3 received message: PREPARE:Transaction DataTransaction Data
+Node 1 received message: PREPARE:Transaction DataTransaction Data
+Block 0 [Hash: 3afea4343326dcfce913ececbc3ea97d9dde2b08ef9b4725afb058720e1bad33]
+Blockchain valid: True
+New node 4 added and registered.
