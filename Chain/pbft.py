@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import threading
 
 class ConsensusAlgorithm(ABC):
     @abstractmethod
@@ -38,10 +37,10 @@ class PBFT(ConsensusAlgorithm):
 class PBFTNetwork:
     def __init__(self, nodes):
         self.nodes = nodes
-        self.primary_node = nodes[0]
+        self.client_node = nodes[0]
 
     def broadcast_request(self, request):
-        self.primary_node.receive_message(request)
+        self.client_node.receive_message(request)
 
     def add_node(self, node):
         for n in self.nodes:
@@ -51,7 +50,9 @@ class PBFTNetwork:
 
     def initialize_network(self):
         for node in self.nodes:
+            print(f"node {node}")
             for peer in self.nodes:
+                print(f"peer {peer}")
                 if node.node_id != peer.node_id:
                     node.connect_to_peer(peer.host, peer.port)
 
