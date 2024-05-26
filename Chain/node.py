@@ -1,4 +1,4 @@
-from Chain.network import Server, Client
+from network import Server, Client
 
 
 class Node:
@@ -27,17 +27,26 @@ class Node:
 
     def receive_message(self, message):
         print(f"Node {self.node_id} received message: {message}")
+        if message not in self.processed_messages:
+            self.processed_messages.add(message)
+            self.pre_prepared_messages.add(message)
+            print(f"Node {self.node_id} processed messages: {self.processed_messages}")
+            if message.startswith("PREPARE:"):
+                request = message[len("PREPARE:"):]
+                print(request, list(self.pre_prepared_messages))
+                
+                if any(request in message for message in self.pre_prepared_messages):
+                    self.consensus_algorithm.prepare(request, self)
+                    self.send_message_to_all(f"COMMIT:{request}")
 
-        if message.startswith("PREPARE:"):
-            request = message[len("PREPARE:"):]
-            self.process_prepare(request)
+            elif message.startswith("COMMIT:"):
+                request = message[len("COMMIT:"):]
+                if request in self.prepared_messages:
+                    self.consensus_algorithm.commit(request, self)
 
-        elif message.startswith("COMMIT:"):
-            request = message[len("COMMIT:"):]
-            self.process_commit(request)
-
-        else:
-            self.process_request(message)
+            else:
+                self.consensus_algorithm.pre_prepare(message, self)
+                self.send_message_to_all(f"PREPARE:{message}")
 
     def process_request(self, message):
         if message not in self.processed_messages:
