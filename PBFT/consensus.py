@@ -8,7 +8,7 @@ from cmath import inf
 from nacl.signing import SigningKey
 from nacl.signing import VerifyKey
 
-ports_file = "ports.json"
+ports_file = "/Users/sikk/Desktop/rPBFT/PBFT/ports.json"
 with open(ports_file):
     ports_format= open(ports_file)
     ports = json.load(ports_format)
@@ -23,14 +23,14 @@ nodes_max_number = ports["nodes_max_number"]
 nodes_ports = [(nodes_starting_port + i) for i in range (0,nodes_max_number)]
 clients_ports = [(clients_starting_port + i) for i in range (0,clients_max_number)]
 
-preprepare_format_file = "messages_formats/preprepare_format.json"
-prepare_format_file = "messages_formats/prepare_format.json"
-commit_format_file = "messages_formats/commit_format.json"
-reply_format_file = "messages_formats/reply_format.json"
-checkpoint_format_file = "messages_formats/checkpoint_format.json"
-checkpoint_vote_format_file = "messages_formats/checkpoint_vote_format.json"
-view_change_format_file = "messages_formats/view_change_format.json"
-new_view_format_file = "messages_formats/new_view_format.json"
+preprepare_format_file = "/Users/sikk/Desktop/rPBFT/PBFT/messages_formats/preprepare_format.json"
+prepare_format_file = "/Users/sikk/Desktop/rPBFT/PBFT/messages_formats/prepare_format.json"
+commit_format_file = "/Users/sikk/Desktop/rPBFT/PBFT/messages_formats/commit_format.json"
+reply_format_file = "/Users/sikk/Desktop/rPBFT/PBFT/messages_formats/reply_format.json"
+checkpoint_format_file = "/Users/sikk/Desktop/rPBFT/PBFT/messages_formats/checkpoint_format.json"
+checkpoint_vote_format_file = "/Users/sikk/Desktop/rPBFT/PBFT/messages_formats/checkpoint_vote_format.json"
+view_change_format_file = "/Users/sikk/Desktop/rPBFT/PBFT/messages_formats/view_change_format.json"
+new_view_format_file = "/Users/sikk/Desktop/rPBFT/PBFT/messages_formats/new_view_format.json"
 
 def run_APBFT(nodes,proportion,checkpoint_frequency0,clients_ports0,timer_limit_before_view_change0): # All the nodes participate in the consensus
 
@@ -102,6 +102,7 @@ def run_nodes(nodes):
     total_initial_nodes = 0
     for node_type in nodes[0]:
         total_initial_nodes = total_initial_nodes + node_type[1]
+    print("Total initial nodes: %d" % total_initial_nodes)
     
     # Starting nodes:
     last_waiting_time = 0

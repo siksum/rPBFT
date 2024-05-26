@@ -2,11 +2,11 @@ import socket
 import json
 import datetime
 import time
-from PBFT import *
+from consensus import *
 from nacl.signing import SigningKey
 from nacl.signing import VerifyKey
 
-ports_file = "ports.json"
+ports_file = "/Users/sikk/Desktop/rPBFT/PBFT/ports.json"
 with open(ports_file):
     ports_format= open(ports_file)
     ports = json.load(ports_format)
@@ -22,7 +22,7 @@ nodes_ports = [(nodes_starting_port + i) for i in range (0,nodes_max_number)]
 clients_ports = [(clients_starting_port + i) for i in range (0,clients_max_number)]
 
 global request_format_file
-request_format_file = "messages_formats/request_format.json"
+request_format_file = "/Users/sikk/Desktop/rPBFT/PBFT/messages_formats/request_format.json"
 
 class Client: # Client's communication is synchronous: It can not send a request until its last request is answered.
 
