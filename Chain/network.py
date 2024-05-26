@@ -7,21 +7,26 @@ class Server:
         self.port = port
         self.node = node
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen(5)
         self.clients = []
+        self.running = True
 
     def start(self):
         threading.Thread(target=self.accept_clients).start()
 
     def accept_clients(self):
-        while True:
-            client_socket, client_address = self.server_socket.accept()
-            self.clients.append(client_socket)
-            threading.Thread(target=self.handle_client, args=(client_socket,)).start()
+        while self.running:
+            try:
+                client_socket, client_address = self.server_socket.accept()
+                self.clients.append(client_socket)
+                threading.Thread(target=self.handle_client, args=(client_socket,)).start()
+            except:
+                break
 
     def handle_client(self, client_socket):
-        while True:
+        while self.running:
             try:
                 message = client_socket.recv(1024).decode('utf-8')
                 if message:
@@ -39,6 +44,12 @@ class Server:
             except:
                 self.clients.remove(client)
 
+    def stop(self):
+        self.running = False
+        for client in self.clients:
+            client.close()
+        self.server_socket.close()
+
 class Client:
     def __init__(self, host, port):
         self.host = host
@@ -49,3 +60,5 @@ class Client:
     def send_message(self, message):
         self.client_socket.sendall(message.encode('utf-8'))
 
+    def close(self):
+        self.client_socket.close()

@@ -1,29 +1,35 @@
-from blockchain import Blockchain, PBFT
+from blockchain import Blockchain
+from pbft import PBFT, PBFTNetwork
 from node import Node, ClientNode
 import time
 
-
 if __name__ == "__main__":
-    blockchain = Blockchain()
-    node1 = Node(1, 'localhost', 8000, blockchain)
-    node2 = Node(2, 'localhost', 8001, blockchain)
-    node3 = Node(3, 'localhost', 8002, blockchain)
+    try:
+        blockchain = Blockchain()
+        pbft_algorithm = PBFT()
 
-    pbft = PBFT([node1, node2, node3])
-    pbft.initialize_network()
+        node1 = Node(1, 'localhost', 5000, blockchain, pbft_algorithm)
+        node2 = Node(2, 'localhost', 5001, blockchain, pbft_algorithm)
+        node3 = Node(3, 'localhost', 5002, blockchain, pbft_algorithm)
 
-    client = ClientNode(0, pbft)
+        pbft_network = PBFTNetwork([node1, node2, node3])
+        pbft_network.initialize_network()
 
-    client.send_request("Transaction Data")
-    
-    time.sleep(2)
+        client = ClientNode(0, pbft_network)
 
-    for block in blockchain.chain:
-        print(f"Block {block.index} [Hash: {block.hash}]")
+        client.send_request("Transaction Data")
+        
+        time.sleep(2)
 
-    is_valid = blockchain.is_chain_valid()
-    print(f"Blockchain valid: {is_valid}")
+        for block in blockchain.chain:
+            print(f"Block {block.index} [Hash: {block.hash}]")
 
-    new_node = Node(4, 'localhost', 8003, blockchain)
-    pbft.add_node(new_node)
-    print(f"New node {new_node.node_id} added and registered.")
+        is_valid = blockchain.is_chain_valid()
+        print(f"Blockchain valid: {is_valid}")
+
+        new_node = Node(4, 'localhost', 5003, blockchain, pbft_algorithm)
+        pbft_network.add_node(new_node)
+        print(f"New node {new_node.node_id} added and registered.")
+
+    finally:
+        pbft_network.stop()

@@ -1,12 +1,12 @@
 from Chain.network import Server, Client
 
-
 class Node:
-    def __init__(self, node_id, host, port, blockchain):
+    def __init__(self, node_id, host, port, blockchain, consensus_algorithm):
         self.node_id = node_id
         self.host = host
         self.port = port
         self.blockchain = blockchain
+        self.consensus_algorithm = consensus_algorithm
         self.server = Server(host, port, self)
         self.server.start()
         self.peers = []
@@ -21,21 +21,24 @@ class Node:
 
     def receive_message(self, message):
         print(f"Node {self.node_id} received message: {message}")
-        self.pre_prepare(message)
+        if message.startswith("PREPARE:"):
+            self.consensus_algorithm.prepare(message[len("PREPARE:"):], self)
+        elif message.startswith("COMMIT:"):
+            self.consensus_algorithm.commit(message[len("COMMIT:"):], self)
+        else:
+            self.consensus_algorithm.pre_prepare(message, self)
 
-    def pre_prepare(self, request):
-        self.prepare(request)
+    def stop(self):
+        self.server.stop()
+        for peer in self.peers:
+            peer.close()
 
-    def prepare(self, request):
-        self.commit(request)
-
-    def commit(self, request):
-        self.blockchain.add_block(request)
 
 class ClientNode:
-    def __init__(self, client_id, pbft):
+    def __init__(self, client_id, pbft_network):
         self.client_id = client_id
-        self.pbft = pbft
+        self.pbft_network = pbft_network
 
     def send_request(self, request):
-        self.pbft.broadcast_request(request)
+        self.pbft_network.broadcast_request(request)
+

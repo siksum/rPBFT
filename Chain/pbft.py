@@ -1,0 +1,57 @@
+from abc import ABC, abstractmethod
+import threading
+
+class ConsensusAlgorithm(ABC):
+    @abstractmethod
+    def pre_prepare(self, request, node):
+        pass
+
+    @abstractmethod
+    def prepare(self, request, node):
+        pass
+
+    @abstractmethod
+    def commit(self, request, node):
+        pass
+
+class PBFT(ConsensusAlgorithm):
+    def pre_prepare(self, request, node):
+        print(f"Node {node.node_id} pre-prepare stage")
+        node.send_message_to_all(f"PREPARE:{request}")
+        self.prepare(request, node)
+
+    def prepare(self, request, node):
+        print(f"Node {node.node_id} prepare stage")
+        node.send_message_to_all(f"COMMIT:{request}")
+        self.commit(request, node)
+
+    def commit(self, request, node):
+        print(f"Node {node.node_id} commit stage")
+        node.blockchain.add_block(request)
+        print(f"Node {node.node_id} added block: {request}")
+
+
+class PBFTNetwork:
+    def __init__(self, nodes):
+        self.nodes = nodes
+        self.primary_node = nodes[0]
+
+    def broadcast_request(self, request):
+        for node in self.nodes:
+            threading.Thread(target=node.receive_message, args=(request,)).start()
+
+    def add_node(self, node):
+        for n in self.nodes:
+            n.connect_to_peer(node.host, node.port)
+            node.connect_to_peer(n.host, n.port)
+        self.nodes.append(node)
+
+    def initialize_network(self):
+        for node in self.nodes:
+            for peer in self.nodes:
+                if node.node_id != peer.node_id:
+                    node.connect_to_peer(peer.host, peer.port)
+
+    def stop(self):
+        for node in self.nodes:
+            node.stop()
