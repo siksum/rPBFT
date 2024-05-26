@@ -18,7 +18,6 @@ class PBFT(ConsensusAlgorithm):
     def pre_prepare(self, request, node):
         print(f"Node {node.node_id} pre-prepare stage")
         node.pre_prepared_messages.add(request)
-        print("AAA")
         node.send_message_to_all(f"PREPARE:{request}")
 
     def prepare(self, request, node):
@@ -31,7 +30,6 @@ class PBFT(ConsensusAlgorithm):
         node.committed_messages.add(request)
         node.blockchain.add_block(request)
         print(f"Node {node.node_id} added block: {request}")
-        node.send_message_to_all(f"RESPONSE:{request}")
 
 
 

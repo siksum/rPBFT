@@ -9,7 +9,7 @@ if __name__ == "__main__":
         blockchain = Blockchain()
         pbft_algorithm = PBFT()
 
-        count_of_nodes = 3
+        count_of_nodes = 5
         list_of_nodes = []
 
         for i in range(1, count_of_nodes + 1):
@@ -40,7 +40,7 @@ if __name__ == "__main__":
         print(f"Blockchain valid: {is_valid}")
 
         # Add a new node to the network
-        new_node = Node(6, 'localhost', 5105, blockchain, pbft_algorithm)
+        new_node = Node(6, 'localhost', 5107, blockchain, pbft_algorithm)
         pbft_network.add_node(new_node)
         print(f"New node {new_node.node_id} added and registered.")
 
