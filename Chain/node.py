@@ -10,7 +10,6 @@ class Node:
         self.consensus_algorithm = consensus_algorithm
         self.server = Server(host, port, self)
         self.server.start()
-
         self.peers = []
         self.processed_messages = set()
         self.pre_prepared_messages = set()
@@ -51,8 +50,8 @@ class Node:
     def process_request(self, message):
         if message not in self.processed_messages:
             self.processed_messages.add(message)
-            self.consensus_algorithm.pre_prepare(message, self)
             self.pre_prepared_messages.add(message)
+            self.consensus_algorithm.pre_prepare(message, self)
             self.send_message_to_all(f"PREPARE:{message}")
 
     def process_prepare(self, request):

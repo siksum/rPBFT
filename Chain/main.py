@@ -11,6 +11,7 @@ if __name__ == "__main__":
 
         count_of_nodes = 5
         list_of_nodes = []
+        
 
         for i in range(1, count_of_nodes + 1):
             node = Node(i, 'localhost', 5100 + i, blockchain, pbft_algorithm)
