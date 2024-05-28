@@ -11,8 +11,15 @@ if __name__ == "__main__":
 
         count_of_nodes = 5
         list_of_nodes = []
+        count_of_faulty_nodes = 0
         
-
+        if count_of_faulty_nodes is not 0:
+            f = count_of_faulty_nodes
+            m = (f - 1) // 3
+            count_of_nodes = 3 * m + 2 * f
+            print(f"Total nodes: {count_of_nodes}")
+            
+            
         for i in range(1, count_of_nodes + 1):
             node = Node(i, 'localhost', 5100 + i, blockchain, pbft_algorithm)
             list_of_nodes.append(node)
@@ -21,14 +28,14 @@ if __name__ == "__main__":
         pbft_network = PBFTNetwork(list_of_nodes)
 
         # Create client node with node_id = 0 and add it to the network
-        client = ClientNode(0, pbft_network)
-        pbft_network.client_node = client
+        network_client = ClientNode(0, pbft_network, list_of_nodes)
+        pbft_network.client_node = network_client
         
         # Initialize the network
         pbft_network.initialize_network()
 
         # Send a request to the network
-        client.send_request("Transaction Data")
+        network_client.send_request("Transaction Data")
 
         time.sleep(2)
 

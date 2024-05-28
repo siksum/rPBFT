@@ -29,11 +29,8 @@ class Node:
         if message not in self.processed_messages:
             self.processed_messages.add(message)
             self.pre_prepared_messages.add(message)
-            print(f"Node {self.node_id} processed messages: {self.processed_messages}")
             if message.startswith("PREPARE:"):
                 request = message[len("PREPARE:"):]
-                print(request, list(self.pre_prepared_messages))
-                
                 if any(request in message for message in self.pre_prepared_messages):
                     self.consensus_algorithm.prepare(request, self)
                     self.send_message_to_all(f"COMMIT:{request}")
@@ -73,24 +70,26 @@ class Node:
             peer.close()
 
 
-
-
-
 class ClientNode:
-    def __init__(self, client_id, pbft_network):
-        self.client_id = client_id
+    def __init__(self, client_id, pbft_network, list_of_nodes):
+        self.client_node_id = client_id
         self.pbft_network = pbft_network
         self._request = None
-
-    def send_request(self, request):
+        self.list_of_nodes = list_of_nodes
+        self.nodes = []
+        self.primary_node = self.pbft_network.primary_node
+            
+    def send_request(self, request): # 1. request = "Transaction Data"
         self._request = request
-        self.pbft_network.broadcast_request(request)
+        
+        if self.client_node_id == 0 and self.pbft_network.primary_node is not None and self.list_of_nodes is not None:
+            print(f"Client Node {self.client_node_id} send request to primary node")
+            # self.list_of_nodes[0].receive_request = request
+            self.pbft_network.broadcast_request(request)
 
     @property
     def request(self):
         return self._request
-
-
 
         
 class PrimaryNode:
@@ -100,11 +99,18 @@ class PrimaryNode:
         self.pbft = pbft
         self._request = None
 
-    def broadcast_pre_prepare_message(self, request):
+    def broadcast_pre_prepare_message(self, request): # 2. pre_prepare
         print(f"Primary Node {self.node.node_id} broadcasting pre-prepare message")
         self._request = request
+        Node.send_message_to_all(request)
         self.pbft.pre_prepare(request, self.node)
 
+
+    def receive_request(self, request):
+        if request not in self.node.processed_messages:
+            self.node.process_request(request)
+            self.pbft.pre_prepare(request, self.node)
+        self.pbft.pre_prepare(request, self.node)
     @property
     def request(self):
         return self._request

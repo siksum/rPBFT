@@ -40,8 +40,8 @@ class PBFTNetwork:
         self.primary_node = PrimaryNode(nodes[0], self, self.consensus)
         self.client_node = None  # ClientNode 초기화는 main 함수에서 처리
 
-    def broadcast_request(self, request):  # pre_prepare
-        if self.primary_node is not None and self.client_node and request == self.client_node.request:
+    def broadcast_request(self, request):  # 1. request = "Transaction Data"
+        if self.client_node and request == self.client_node.request:
             self.primary_node.broadcast_pre_prepare_message(request)
 
     def add_node(self, node):
@@ -55,6 +55,7 @@ class PBFTNetwork:
             for peer in self.nodes:
                 if node.node_id != peer.node_id:
                     node.connect_to_peer(peer.host, peer.port)
+
 
     def stop(self):
         for node in self.nodes:
