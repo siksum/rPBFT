@@ -6,7 +6,7 @@ from typing import List, Dict
 
 class Test:
     def __init__(self, algorithm, count_of_nodes:int, count_of_faulty_nodes:int, port:int):
-        self.blockchain = Blockchain()
+        self.blockchain: Blockchain = Blockchain()
         self.pbft_algorithm = algorithm
         self.count_of_nodes: int = count_of_nodes
         self.list_of_nodes: List[str] = []
@@ -14,9 +14,9 @@ class Test:
         self.port: int = port
         
 
-    def setup_nodes(self):
+    def setup_nodes(self)-> List[Node]:
         for i in range(1, self.count_of_nodes + 1):
-            node = Node(i, 'localhost', self.port + i, self.blockchain, self.pbft_algorithm)
+            node:Node = Node(i, 'localhost', self.port + i, self.blockchain, self.pbft_algorithm)
             self.list_of_nodes.append(node)
 
     def initialize_network(self):
@@ -36,7 +36,7 @@ class Test:
             print(f"Block {block.index} [Hash: {block.current_block_hash}]")
     
     def check_blockchain_validity(self):
-        is_valid = self.blockchain.is_chain_valid()
+        is_valid: bool = self.blockchain.is_chain_valid()
         print(f"Blockchain valid: {is_valid}")
 
     def check_count_of_nodes(self):
