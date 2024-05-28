@@ -3,54 +3,53 @@ from pbft import PBFT, PBFTNetwork
 from node import Node, ClientNode
 import time
 
-if __name__ == "__main__":
-    try:
-        # Setup the blockchain, PBFT algorithm, and nodes
-        blockchain = Blockchain()
-        pbft_algorithm = PBFT()
 
-        count_of_nodes = 5
-        list_of_nodes = []
-        count_of_faulty_nodes = 0
-        
-        if count_of_faulty_nodes != 0:
-            f = count_of_faulty_nodes
-            m = (f - 1) // 3
-            count_of_nodes = 3 * m + 2 * f
-            print(f"Total nodes: {count_of_nodes}")
-            
-            
-        for i in range(1, count_of_nodes + 1):
-            node = Node(i, 'localhost', 5100 + i, blockchain, pbft_algorithm)
-            list_of_nodes.append(node)
+class Test:
+    def __init__(self):
+        self.blockchain = Blockchain()
+        self.pbft_algorithm = PBFT()
 
-        # Initialize PBFT network with nodes
-        pbft_network = PBFTNetwork(list_of_nodes)
+        self.count_of_nodes = 5
+        self.list_of_nodes = []
+        self.count_of_faulty_nodes = 0
 
-        # Create client node with node_id = 0 and add it to the network
-        network_client = ClientNode(0, pbft_network, list_of_nodes)
-        pbft_network.client_node = network_client
-        
-        # Initialize the network
-        pbft_network.initialize_network()
+    def setup(self):
+        for i in range(1, self.count_of_nodes + 1):
+            node = Node(i, 'localhost', 5100 + i, self.blockchain, self.pbft_algorithm)
+            self.list_of_nodes.append(node)
 
-        # Send a request to the network
-        network_client.send_request("Transaction Data")
+    def initialize_network(self):
+        self.pbft_network = PBFTNetwork(self.list_of_nodes)
 
+        self.network_client = ClientNode(0, self.pbft_network, self.list_of_nodes)
+        self.pbft_network.client_node = self.network_client
+
+        self.pbft_network.initialize_network()
+    
+    def send_request(self):
+        self.network_client.send_request("Transaction Data")
         time.sleep(2)
-
-        # Print the blockchain and check if it is valid
-        for block in blockchain.chain:
+        
+    def print_blockchain(self):
+        for block in self.blockchain.chain:
             print(f"Block {block.index} [Hash: {block.current_block_hash}]")
-
-        # Check if the blockchain is valid
-        is_valid = blockchain.is_chain_valid()
+    
+    def check_blockchain_validity(self):
+        is_valid = self.blockchain.is_chain_valid()
         print(f"Blockchain valid: {is_valid}")
 
-        # Add a new node to the network
-        new_node = Node(6, 'localhost', 5107, blockchain, pbft_algorithm)
-        pbft_network.add_node(new_node)
-        print(f"New node {new_node.node_id} added and registered.")
+class View:
+    def __init__(self):
+        self.view_count = 0
+        
+if __name__ == "__main__":
+    try:
+        test = Test()
+        test.setup()
+        test.initialize_network()
+        test.send_request()
+        test.print_blockchain()
+        test.check_blockchain_validity()
 
     finally:
-        pbft_network.stop()
+       test.pbft_network.stop()
