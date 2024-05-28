@@ -2,16 +2,15 @@ from blockchain import Blockchain
 from pbft import PBFT, PBFTNetwork
 from node import Node, ClientNode
 import time
-
+from typing import List, Dict
 
 class Test:
-    def __init__(self):
+    def __init__(self, count_of_nodes, count_of_faulty_nodes):
         self.blockchain = Blockchain()
         self.pbft_algorithm = PBFT()
-
-        self.count_of_nodes = 5
-        self.list_of_nodes = []
-        self.count_of_faulty_nodes = 0
+        self.count_of_nodes: int = count_of_nodes
+        self.list_of_nodes: List[str] = []
+        self.count_of_faulty_nodes: int = count_of_faulty_nodes
 
     def setup(self):
         for i in range(1, self.count_of_nodes + 1):
@@ -38,13 +37,19 @@ class Test:
         is_valid = self.blockchain.is_chain_valid()
         print(f"Blockchain valid: {is_valid}")
 
+    def check_count_of_nodes(self):
+        assert self.count_of_nodes >= self.count_of_faulty_nodes * 3 + 1, "Count of nodes should be greater than 3f + 1"
+    
 class View:
     def __init__(self):
         self.view_count = 0
         
+
+        
 if __name__ == "__main__":
     try:
-        test = Test()
+        test = Test(count_of_nodes=4, count_of_faulty_nodes=1)
+        test.check_count_of_nodes()
         test.setup()
         test.initialize_network()
         test.send_request()
