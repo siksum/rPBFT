@@ -13,7 +13,7 @@ if __name__ == "__main__":
         list_of_nodes = []
         count_of_faulty_nodes = 0
         
-        if count_of_faulty_nodes is not 0:
+        if count_of_faulty_nodes != 0:
             f = count_of_faulty_nodes
             m = (f - 1) // 3
             count_of_nodes = 3 * m + 2 * f

@@ -55,7 +55,7 @@ class Blockchain:
     def get_latest_block(self):
         return self.chain[-1]
     
-    def create_new_block(self, previous_block, transactions: List[Dict[str, int]]):
+    def create_new_block(self, previous_block):
         index = previous_block.index + 1
         timestamp = int(time.time())
         previous_hash = previous_block.current_block_hash
@@ -67,9 +67,9 @@ class Blockchain:
         return Block(index, previous_hash, timestamp, validator_signatures, consensus_round, current_block_hash)
 
 
-    def add_block(self, transactions: List[Dict[str, int]]):
+    def add_block(self):
         previous_block = self.get_latest_block()
-        new_block = self.create_new_block(previous_block, transactions)
+        new_block = self.create_new_block(previous_block)
         self.chain.append(new_block)
 
     def is_chain_valid(self):
