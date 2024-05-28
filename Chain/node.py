@@ -102,7 +102,7 @@ class PrimaryNode:
     def broadcast_pre_prepare_message(self, request): # 2. pre_prepare
         print(f"Primary Node {self.node.node_id} broadcasting pre-prepare message")
         self._request = request
-        Node.send_message_to_all(request)
+        # Node.send_message_to_all(request)
         self.pbft.pre_prepare(request, self.node)
 
 
@@ -111,6 +111,7 @@ class PrimaryNode:
             self.node.process_request(request)
             self.pbft.pre_prepare(request, self.node)
         self.pbft.pre_prepare(request, self.node)
+        
     @property
     def request(self):
         return self._request

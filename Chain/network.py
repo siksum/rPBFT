@@ -50,6 +50,7 @@ class Server:
             client.close()
         self.server_socket.close()
 
+
 class Client:
     def __init__(self, host, port):
         self.host = host
