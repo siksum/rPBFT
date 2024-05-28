@@ -35,8 +35,9 @@ class Block:
 
 
 class Blockchain:
-    def __init__(self):
-        self.chain: List[Block] = [self.create_genesis_block()] 
+    def __init__(self, blocksize: int):
+        self.chain: List[Block] = [self.create_genesis_block()]
+        self.blocksize: int = blocksize
 
     def create_genesis_block(self)-> Block:
         genesis_data: str = "Genesis Block"

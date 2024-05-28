@@ -5,8 +5,8 @@ import time
 from typing import List, Dict
 
 class Test:
-    def __init__(self, algorithm, count_of_nodes:int, count_of_faulty_nodes:int, port:int):
-        self.blockchain: Blockchain = Blockchain()
+    def __init__(self, algorithm, count_of_nodes:int, count_of_faulty_nodes:int, port:int, blocksize:int):
+        self.blockchain: Blockchain = Blockchain(blocksize)
         self.pbft_algorithm = algorithm
         self.count_of_nodes: int = count_of_nodes
         self.list_of_nodes: List[str] = []
@@ -50,7 +50,7 @@ class View:
         
 if __name__ == "__main__":
     try:
-        test = Test(algorithm=PBFT(), count_of_nodes=4, count_of_faulty_nodes=1, port=5100)
+        test = Test(algorithm=PBFT(), count_of_nodes=4, count_of_faulty_nodes=1, port=5100, blocksize=10)
         test.check_count_of_nodes()
         test.setup_nodes()
         test.initialize_network()
