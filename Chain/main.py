@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
         # Print the blockchain and check if it is valid
         for block in blockchain.chain:
-            print(f"Block {block.index} [Hash: {block.hash}]")
+            print(f"Block {block.index} [Hash: {block.current_block_hash}]")
 
         # Check if the blockchain is valid
         is_valid = blockchain.is_chain_valid()
