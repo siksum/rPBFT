@@ -71,11 +71,16 @@ class Blockchain:
 
     # 체인 전체를 스캔하면 너무 성능을 해치는 것 같아서 블록 생성시에 한번 체크하는게 좋을듯.
     def is_valid_block(self, block):
-        previous_block = self.chain[-2]
-        if  block.index != previous_block.index + 1 or \
-            block.previous_hash != previous_block.current_block_hash or \
-            block.current_block_hash != self.calculate_hash(block.data, block.index, block.previous_hash, block.timestamp):
+        if block.index == 0:
+            # Genesis block is always valid
+            return True
+        
+        previous_block = self.chain[block.index - 1]
+        if block.index != previous_block.index + 1 or \
+        block.previous_hash != previous_block.current_block_hash or \
+        block.current_block_hash != self.calculate_hash(block.data, block.index, block.previous_hash, block.timestamp):
             return False
+        
         return True
 
     # def synchronize(self, blockchain):

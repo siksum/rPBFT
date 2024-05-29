@@ -26,23 +26,21 @@ class Node:
 
     def receive_message(self, message):
         print(f"Node {self.node_id} received message: {message}")
-        if message not in self.processed_messages:
-            self.processed_messages.add(message)
-            self.pre_prepared_messages.add(message)
-            if message.startswith("PREPARE:"):
-                request = message[len("PREPARE:"):]
-                if any(request in message for message in self.pre_prepared_messages):
-                    self.consensus_algorithm.prepare(request, self)
-                    self.send_message_to_all(f"COMMIT:{request}")
-
-            elif message.startswith("COMMIT:"):
-                request = message[len("COMMIT:"):]
-                if request in self.prepared_messages:
-                    self.consensus_algorithm.commit(request, self)
-
-            else:
-                self.consensus_algorithm.pre_prepare(message, self)
-                self.send_message_to_all(f"PREPARE:{message}")
+        message_type = message.get('type')
+        if message_type == 'request':
+            self.handle_request(message)
+        elif message_type == 'pre-prepare':
+            self.handle_pre_prepare(message)
+        elif message_type == 'prepare':
+            self.handle_prepare(message)
+        elif message_type == 'commit':
+            self.handle_commit(message)
+        elif message_type == 'view-change':
+            self.handle_view_change(message)
+        elif message_type == 'new-view':
+            self.handle_new_view(message)
+        else:
+            print(f"Node {self.node_id} received unknown message type: {message_type}")
 
     def process_request(self, message):
         if message not in self.processed_messages:
