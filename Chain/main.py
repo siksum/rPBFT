@@ -44,7 +44,7 @@ if __name__ == "__main__":
             print(f"Block {block.index} [Hash: {block.current_block_hash}]")
 
         # Check if the blockchain is valid
-        is_valid = blockchain.is_chain_valid()
+        is_valid = blockchain.is_valid_block(blockchain.get_latest_block())
         print(f"Blockchain valid: {is_valid}")
 
         # Add a new node to the network
