@@ -1,5 +1,9 @@
+import hashlib
+import json
+import pickle
 from network import Server, Client
 
+F = 0
 
 class Node:
     def __init__(self, node_id, host, port, blockchain, consensus_algorithm):
@@ -11,10 +15,27 @@ class Node:
         self.server = Server(host, port, self)
         self.server.start()
         self.peers = []
-        self.processed_messages = set()
-        self.pre_prepared_messages = set()
-        self.prepared_messages = set()
-        self.committed_messages = set()
+        
+        # message storage
+        self.requests = []
+        self.pre_prepared = []
+        self.prepared = []
+        self.committed = []
+        
+        # view change에 대한 voting
+        self.view_change_votes = []
+        
+        # view, seq, checkpoint, bound
+        self.view_num = 0
+        self.seq_num = 0
+        self.last_stable_checkpoint = 0
+        self.low_bound = 0
+        self.high_bound = 0
+        
+        # view change 타이머
+        self.view_change_timer = None
+        
+        self.clients = []
 
     def connect_to_peer(self, host, port):
         client = Client(host, port)
@@ -24,43 +45,108 @@ class Node:
         for peer in self.peers:
             peer.send_message(message)
 
+    def is_primary(self):
+        if self.node_id == 1:
+            return True 
+        return False
+    
     def receive_message(self, message):
         print(f"Node {self.node_id} received message: {message}")
-        message_type = message.get('type')
-        if message_type == 'request':
-            self.handle_request(message)
-        elif message_type == 'pre-prepare':
-            self.handle_pre_prepare(message)
-        elif message_type == 'prepare':
-            self.handle_prepare(message)
-        elif message_type == 'commit':
-            self.handle_commit(message)
-        elif message_type == 'view-change':
-            self.handle_view_change(message)
-        elif message_type == 'new-view':
-            self.handle_new_view(message)
-        else:
-            print(f"Node {self.node_id} received unknown message type: {message_type}")
+        message = json.loads(message)
+        if message not in self.requests:
+            if message["message_type"] == "PrePrepare":
+                print(f"[RECV_PRE_PREPARE] Node {self.node_id} received PRE-PREPARE: view={message["view_num"]}, seq={message["seq_num"]}, digest={message["digest"]}")
 
-    def process_request(self, message):
-        if message not in self.processed_messages:
-            self.processed_messages.add(message)
-            self.pre_prepared_messages.add(message)
-            self.consensus_algorithm.pre_prepare(message, self)
-            self.send_message_to_all(f"PREPARE:{message}")
+                # TODO: view change 구현
+                # if pre_prepare.seq_num in self.pre_prepared:
+                #     if pre_prepare.digest != self.pre_prepared[pre_prepare.seq_num].digest:
+                #         self.send_view_change()
+                #     return
+                
+                self.pre_prepared.append(message)
+                
+                # print("pre_prepared:", self.pre_prepared)
+                
+                processed_pre_prepare = {
+                    "message_type": "Prepare",
+                    "view_num": message["view_num"],
+                    "seq_num": message["seq_num"],
+                    "digest": message["digest"],
+                    "node_id": self.node_id
+                }
+                
+                self.prepared.append(processed_pre_prepare)
+                
+                processed_pre_prepare = json.dumps(processed_pre_prepare).encode()
+                self.send_message_to_all(processed_pre_prepare)
+                
+        if message["message_type"] == "Prepare":
+            self.process_prepare(message)
+            
+        if message["message_type"] == "Commit":
+            self.process_commit(message)
+            
 
-    def process_prepare(self, request):
-        if request not in self.prepared_messages:
-            if request in self.pre_prepared_messages:
-                self.prepared_messages.add(request)
-                self.consensus_algorithm.prepare(request, self)
-                self.send_message_to_all(f"COMMIT:{request}")
+    def process_request(self, request):
+        print(f"[RECV_REQ] Node {self.node_id} received request: {request}")
+        if self.is_primary():
+            digest = hashlib.sha256(pickle.dumps(request)).hexdigest()
+            
+            
+            processed_request = {
+                "message_type": "PrePrepare",
+                "view_num": self.view_num,
+                "seq_num": self.seq_num,
+                "digest": digest,
+                "request": str(request)
+            }
+            
+            self.requests.append(processed_request)
+            self.seq_num += 1
+            return processed_request
+            
 
-    def process_commit(self, request):
-        if request not in self.committed_messages:
-            if request in self.prepared_messages:
-                self.committed_messages.add(request)
-                self.consensus_algorithm.commit(request, self)
+    def process_prepare(self, prepare):
+        print(f"[RECV_PREPARE] Node {self.node_id} received PREPARE: view={prepare["view_num"]}, seq={prepare["seq_num"]}")
+        if prepare["seq_num"] != self.seq_num or \
+           prepare["view_num"] != self.view_num or \
+           prepare["digest"] != self.pre_prepared[prepare["seq_num"]]["digest"]:
+               print("fucked up")
+               return
+           
+        print(self.is_prepared(prepare["seq_num"]))
+        self.prepared.append(prepare)
+        
+        if self.is_prepared(prepare["seq_num"]):
+            processed_prepare = {
+                "message_type": "Commit",
+                "view_num": self.view_num,
+                "seq_num": self.seq_num,
+                "node_id": self.node_id
+            }
+            print("commit msg:", processed_prepare)
+            
+            self.committed.append(processed_prepare)
+            
+            commit_message = json.dumps(processed_prepare).encode()
+            self.send_message_to_all(commit_message)
+
+    def is_prepared(self, seq_num):
+        print(self.prepared)
+        if not any(message['seq_num'] == seq_num for message in self.prepared):
+            return False
+        return len(self.prepared[seq_num]) >= 2 * F + 1
+
+    def process_commit(self, commit):
+        print(f"[RECV_COMMIT] Node {self.node_id} received COMMIT: view={commit["view_num"]}, seq={commit["seq_num"]}")
+        
+        
+        
+        
+        # if request not in self.committed_messages:
+        #     if request in self.prepared_messages:
+        #         self.committed_messages.add(request)
+        #         self.consensus_algorithm.commit(request, self)
 
     def stop(self):
         self.server.stop()

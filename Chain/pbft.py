@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import json
 from node import PrimaryNode, ClientNode
 
 class ConsensusAlgorithm(ABC):
@@ -17,19 +18,21 @@ class ConsensusAlgorithm(ABC):
 class PBFT(ConsensusAlgorithm):
     def pre_prepare(self, request, node):
         print(f"Node {node.node_id} pre-prepare stage")
-        node.pre_prepared_messages.add(request)
-        node.send_message_to_all(f"PREPARE:{request}")
+        node.pre_prepared.append(request)
+        processed_request = node.process_request(request)
+        serialized_request = json.dumps(processed_request).encode()
+        node.send_message_to_all(serialized_request)
 
     def prepare(self, request, node):
-        print(f"Node {node.node_id} prepare stage")
-        node.prepared_messages.add(request)
-        node.send_message_to_all(f"COMMIT:{request}")
+        pass
 
-    def commit(self, request, node):
+    def commit(self, commit, node):
         print(f"Node {node.node_id} commit stage")
-        node.committed_messages.add(request)
-        node.blockchain.add_block(request)
-        print(f"Node {node.node_id} added block: {request}")
+        node.pre_prepared.append(commit)
+        processed_prepare = node.process_request(commit)
+        serialized_prepare = json.dumps(processed_prepare).encode()
+        node.send_message_to_all(serialized_prepare)
+        pass
 
 
 

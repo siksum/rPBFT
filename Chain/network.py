@@ -1,6 +1,6 @@
 import socket
 import threading
-import json
+
 class Server:
     def __init__(self, host, port, node):
         self.host = host
@@ -28,9 +28,8 @@ class Server:
     def handle_client(self, client_socket):
         while self.running:
             try:
-                message_bytes = client_socket.recv(1024)
-                if message_bytes:
-                    message = json.loads(message_bytes.decode('utf-8'))
+                message = client_socket.recv(1024).decode('utf-8')
+                if message:
                     self.node.receive_message(message)
                 else:
                     break
@@ -39,10 +38,9 @@ class Server:
         client_socket.close()
 
     def broadcast(self, message):
-        message_bytes = json.dumps(message).encode('utf-8')
         for client in self.clients:
             try:
-                client.sendall(message_bytes)
+                client.sendall(message.encode('utf-8'))
             except:
                 self.clients.remove(client)
 
@@ -61,8 +59,7 @@ class Client:
         self.client_socket.connect((self.host, self.port))
 
     def send_message(self, message):
-        message_bytes = json.dumps(message).encode('utf-8')
-        self.client_socket.sendall(message_bytes)
+        self.client_socket.sendall(message)
 
     def close(self):
         self.client_socket.close()

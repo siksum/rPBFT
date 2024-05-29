@@ -33,9 +33,17 @@ if __name__ == "__main__":
         
         # Initialize the network
         pbft_network.initialize_network()
+        
+        request = {
+            "message_type": "Request",
+            "client_id": 1,
+            "timestamp": time.time(),
+            "operation": "Request",
+            "seq_num": 0
+        }
 
         # Send a request to the network
-        network_client.send_request("Transaction Data")
+        network_client.send_request(request)
 
         time.sleep(2)
 
@@ -44,7 +52,7 @@ if __name__ == "__main__":
             print(f"Block {block.index} [Hash: {block.current_block_hash}]")
 
         # Check if the blockchain is valid
-        is_valid = blockchain.is_valid_block(blockchain.get_latest_block())
+        is_valid = blockchain.is_chain_valid()
         print(f"Blockchain valid: {is_valid}")
 
         # Add a new node to the network
