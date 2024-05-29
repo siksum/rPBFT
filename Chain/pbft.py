@@ -51,19 +51,18 @@ class PBFT(ConsensusAlgorithm):
                 node.last_primary_message_time = int(time.time())
 
             stage = message["stage"]
+            if stage == "PRE-PREPARE":
+                self.pre_prepare(message, node)
             if stage == "PREPARE":
-                if any(message["data"] in msg for msg in node.pre_prepared_messages):
+                # if any(message["data"] in msg for msg in node.pre_prepared_messages):
                     self.prepare(message, node)
-
             elif stage == "COMMIT":
-                if message["data"] in node.prepared_messages:
+                # if message["data"] in node.prepared_messages:
                     self.commit(message, node)
-
             elif stage == "VIEW-CHANGE":
                 self.handle_view_change(message, node)
 
-            else:
-                self.pre_prepare(message, node)
+
 
     def request_view_change(self, node_id: int, new_view: int) -> None:
         view_change = ViewChange(node_id)
@@ -94,31 +93,41 @@ class PBFT(ConsensusAlgorithm):
         }
         node.pre_prepared_messages.add(str(pre_prepare_message))
         node.send_message_to_all(pre_prepare_message)
-
-    def prepare(self, pre_prepare_message: Dict[str, Any], node: 'Node') -> None:
-        print(f"Node {node.node_id} prepare stage")
-        prepare_message = {
+        
+        prepare_message= {
             "stage": "PREPARE",
-            "view": pre_prepare_message["view"],
-            "seq_num": pre_prepare_message["seq_num"],
-            "digest": pre_prepare_message["digest"],
+            "view": self.current_view,
+            "seq_num": node.current_view_number,
+            "digest": request_digest,
             "node_id": node.node_id
         }
+        self.prepare(prepare_message, node)
+
+    def prepare(self, prepare_message: Dict[str, Any], node: 'Node') -> None:
+        print(f"Node {node.node_id} prepare stage")
         node.prepared_messages.add(str(prepare_message))
         node.send_message_to_all(prepare_message)
+        
+        prepared_message_count = len([msg for msg in node.prepared_messages if prepare_message["digest"] in msg])
+        if prepared_message_count >= (2 * self.faulty_nodes_count() + 1):
+            commit_message = {
+                "stage": "COMMIT",
+                "view": prepare_message["view"],
+                "seq_num": prepare_message["seq_num"],
+                "digest": prepare_message["digest"],
+                "node_id": node.node_id
+            }
+            self.commit(commit_message, node)
 
-    def commit(self, prepare_message: Dict[str, Any], node: 'Node') -> None:
+    def commit(self, commit_message: Dict[str, Any], node: 'Node') -> None:
         print(f"Node {node.node_id} commit stage")
-        commit_message = {
-            "stage": "COMMIT",
-            "view": prepare_message["view"],
-            "seq_num": prepare_message["seq_num"],
-            "digest": prepare_message["digest"],
-            "node_id": node.node_id
-        }
         node.committed_messages.add(str(commit_message))
-        node.blockchain.add_block_to_blockchain(commit_message)
-        print(f"Node {node.node_id} added block: {commit_message}")
+        node.send_message_to_all(commit_message)
+
+        committed_message_count = len([msg for msg in node.committed_messages if commit_message["digest"] in msg])
+        if committed_message_count >= (2 * self.faulty_nodes_count() + 1):
+            node.blockchain.add_block_to_blockchain(commit_message)
+            print(f"Node {node.node_id} added block: {commit_message}")
 
     def handle_view_change(self, message: Dict[str, Any], node: 'Node') -> None:
         new_view = message["new_view"]
@@ -139,7 +148,11 @@ class PBFT(ConsensusAlgorithm):
         self.current_view = new_view
         self.current_timeout = self.timeout_base
         print(f"Starting new view: {new_view}")
-        self.primary_node = self.select_new_primary(new_view)
+        if self.nodes:
+            self.primary_node = self.select_new_primary(new_view)
+        else:
+            print("Error: No nodes available to select a new primary.")
+
 
     def select_new_primary(self, new_view: int) -> 'Node':
         if len(self.nodes) > 0:
