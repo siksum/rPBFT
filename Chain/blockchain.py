@@ -1,80 +1,9 @@
 import hashlib
 import time
-from typing import List, Dict
+from typing import List
 import json
 
-class View:
-    def __init__(self, node_id: int):
-        self.total_view_count: int = 0
-        self.current_view: Dict[str, int] = {}
-        self.view_change: bool = False
-        self.view_change_count: int = 0
-        self.node_id: int = node_id    
-    
-    def change_view(self):
-        self.view_change = True
-        self.view_change_count += 1
-        self.total_view_count += 1
-        self.current_view = {f"View {self.total_view_count}": self.node_id}
-        return self.current_view
-    
-    def reset_view_change(self):
-        self.view_change = False
-        self.view_change_count = 0
-        self.current_view = {}
-        self.view_count = 0
-    
-    @property
-    def current_view(self)-> Dict[str, int]:
-        return self.current_view
-    
-    @property
-    def view_change_count(self)-> int:
-        return self.view_change_count
-    
-    @property
-    def view_change_status(self)-> bool:
-        return self.view_change
-    
-    @property
-    def total_view_count(self)-> int:
-        return self.total_view_count
-    
-    def set_node_id(self, node_id: int):
-        self.node_id = node_id
-    
-    @property   
-    def node_id(self)-> int:
-        return self.node_id
-    
-    def __str__(self):
-        return f"View Change Status: {self.view_change}, View Change Count: {self.view_change_count}, Current View: {self.current_view}, View Count: {self.total_view_count}, Node ID: {self.node_id}"    
-
-
-
-class Block:
-    def __init__(self, 
-                 index: int, 
-                 previous_hash: str,
-                 timestamp: int, 
-                 data: str,
-                 current_block_hash: str):
-        self.index: int = index
-        self.previous_hash: str = previous_hash 
-        self.timestamp: int = timestamp
-        self.data: str = data    
-        self.current_block_hash: str = current_block_hash
-
-    @property
-    def block_header(self)-> Dict[str, str]:
-        return {
-            "index": self.index,
-            "previous_hash": self.previous_hash,
-            "timestamp": self.timestamp,
-            "data": self.data,
-            "current_block_hash": self.current_block_hash
-        }
-
+from block import Block
 
 
 class Blockchain:
@@ -84,7 +13,7 @@ class Blockchain:
 
     def create_genesis_block(self)-> Block:
         genesis_data: str = "Genesis Block"
-        genesis_hash: str = self.calculate_hash(genesis_data)
+        genesis_hash: str = self.calculate_hash(0, "0"*64, int(time.time()), genesis_data, "0"*64)
         return Block(
             index=0, 
             previous_hash="0"*64, 
@@ -109,7 +38,7 @@ class Blockchain:
         new_block: Block = self.create_new_block(previous_block)
         self.chain.append(new_block)
 
-    def is_valid_block(self, block) -> bool:
+    def is_valid_block(self, block: Block) -> bool:
         previous_block: Block = self.chain[-2]
         if  block.index != previous_block.index + 1 or \
             block.previous_hash != previous_block.current_block_hash or \

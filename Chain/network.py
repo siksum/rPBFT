@@ -1,6 +1,7 @@
 import socket
 import threading
 
+
 class Server:
     def __init__(self, host, port, node):
         self.host = host
@@ -13,10 +14,10 @@ class Server:
         self.clients = []
         self.running = True
 
-    def start(self):
+    def start(self) -> None:
         threading.Thread(target=self.accept_clients).start()
 
-    def accept_clients(self):
+    def accept_clients(self) -> None:
         while self.running:
             try:
                 client_socket, client_address = self.server_socket.accept()
@@ -25,7 +26,7 @@ class Server:
             except:
                 break
 
-    def handle_client(self, client_socket):
+    def handle_client(self, client_socket) -> None:
         while self.running:
             try:
                 message = client_socket.recv(1024).decode('utf-8')
@@ -37,14 +38,14 @@ class Server:
                 break
         client_socket.close()
 
-    def broadcast(self, message):
+    def broadcast(self, message: str) -> None:
         for client in self.clients:
             try:
                 client.sendall(message.encode('utf-8'))
             except:
                 self.clients.remove(client)
 
-    def stop(self):
+    def stop(self) -> None:
         self.running = False
         for client in self.clients:
             client.close()
@@ -58,8 +59,8 @@ class Client:
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect((self.host, self.port))
 
-    def send_message(self, message):
+    def send_message(self, message: str) -> None:
         self.client_socket.sendall(message.encode('utf-8'))
 
-    def close(self):
+    def close(self) -> None:
         self.client_socket.close()
