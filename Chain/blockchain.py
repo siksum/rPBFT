@@ -1,6 +1,7 @@
 import hashlib
 import time
 from typing import List, Dict
+import json
 
 class View:
     def __init__(self, node_id: int):
@@ -51,21 +52,16 @@ class View:
 
 
 
-
 class Block:
     def __init__(self, 
                  index: int, 
                  previous_hash: str,
                  timestamp: int, 
-                 validator_signatures: List[str], 
-                 consensus_round: int,
                  data: str,
                  current_block_hash: str):
         self.index: int = index
         self.previous_hash: str = previous_hash 
         self.timestamp: int = timestamp
-        self.validator_signatures: List[str] = validator_signatures
-        self.consensus_round: int = consensus_round
         self.data: str = data    
         self.current_block_hash: str = current_block_hash
 
@@ -75,11 +71,10 @@ class Block:
             "index": self.index,
             "previous_hash": self.previous_hash,
             "timestamp": self.timestamp,
-            "validator_signatures": self.validator_signatures,
-            "consensus_round": self.consensus_round,
             "data": self.data,
             "current_block_hash": self.current_block_hash
         }
+
 
 
 class Blockchain:
@@ -94,8 +89,6 @@ class Blockchain:
             index=0, 
             previous_hash="0"*64, 
             timestamp=int(time.time()), 
-            validator_signatures=[],
-            consensus_round=0,
             data=genesis_data,
             current_block_hash=genesis_hash
         )
@@ -108,30 +101,33 @@ class Blockchain:
         index: int = previous_block.index + 1
         timestamp: int = int(time.time())
         previous_hash: str = previous_block.current_block_hash
-        validator_signatures: List[str] = ["signature1", "signature2"]
-        consensus_round: int = 1
-        current_block_hash: str = self.calculate_hash(str(index) + previous_hash + str(timestamp) + str(validator_signatures) + str(consensus_round))
-    
-        return Block(index, previous_hash, timestamp, validator_signatures, consensus_round, current_block_hash)
-
+        current_block_hash: str = self.calculate_hash(index, previous_hash, timestamp, previous_block.data, previous_block.current_block_hash)
+        return Block(index, previous_hash, timestamp, current_block_hash)
 
     def add_block(self)-> List[Block]:
         previous_block: Block = self.get_latest_block()
         new_block: Block = self.create_new_block(previous_block)
         self.chain.append(new_block)
 
-    def is_chain_valid(self)-> bool:
-        for i in range(1, len(self.chain)):
-            current_block: Block = self.chain[i]
-            previous_block: Block = self.chain[i - 1]
-            if current_block.current_block_hash != self.calculate_hash(str(current_block.index) + current_block.previous_hash + str(current_block.timestamp) + current_block.data + current_block.merkle_root + current_block.state_root_hash + str(current_block.validator_signatures) + str(current_block.consensus_round)):
-                return False
-            if current_block.previous_hash != previous_block.current_block_hash:
-                return False
+    def is_valid_block(self, block) -> bool:
+        previous_block: Block = self.chain[-2]
+        if  block.index != previous_block.index + 1 or \
+            block.previous_hash != previous_block.current_block_hash or \
+            block.current_block_hash != self.calculate_hash(block.index, block.previous_hash, block.timestamp, block.data, block.current_block_hash):
+            return False
         return True
     
-    def calculate_hash(self, value: str) -> str:
-        return hashlib.sha256(value.encode('utf-8')).hexdigest()
+    def calculate_hash(self, index: int, previous_hash: str, timestamp: int, data: str, current_block_hash: str) -> str:
+        payload = {
+            'index': index,
+            'previous_hash': previous_hash,
+            'timestamp': timestamp,
+            'data': data,
+            'current_block_hash': current_block_hash
+        }
+        payload_str: str = json.dumps(payload, sort_keys=True)
+        
+        return hashlib.sha256(payload_str.encode('utf-8')).hexdigest()
     
     @property
     def updated_chain(self)-> List[Block]:
