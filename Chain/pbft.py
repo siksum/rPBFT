@@ -108,26 +108,27 @@ class PBFT(ConsensusAlgorithm):
         node.prepared_messages.add(str(prepare_message))
         node.send_message_to_all(prepare_message)
         
-        prepared_message_count = len([msg for msg in node.prepared_messages if prepare_message["digest"] in msg])
-        if prepared_message_count >= (2 * self.faulty_nodes_count() + 1):
-            commit_message = {
-                "stage": "COMMIT",
-                "view": prepare_message["view"],
-                "seq_num": prepare_message["seq_num"],
-                "digest": prepare_message["digest"],
-                "node_id": node.node_id
-            }
-            self.commit(commit_message, node)
+        # prepared_message_count = len([msg for msg in node.prepared_messages if prepare_message["digest"] in msg])
+        # if prepared_message_count >= (2 * self.faulty_nodes_count() + 1):
+        commit_message = {
+            "stage": "COMMIT",
+            "view": prepare_message["view"],
+            "seq_num": prepare_message["seq_num"],
+            "digest": prepare_message["digest"],
+            "node_id": node.node_id
+        }
+        self.commit(commit_message, node)
 
     def commit(self, commit_message: Dict[str, Any], node: 'Node') -> None:
         print(f"Node {node.node_id} commit stage")
         node.committed_messages.add(str(commit_message))
         node.send_message_to_all(commit_message)
 
-        committed_message_count = len([msg for msg in node.committed_messages if commit_message["digest"] in msg])
-        if committed_message_count >= (2 * self.faulty_nodes_count() + 1):
-            node.blockchain.add_block_to_blockchain(commit_message)
-            print(f"Node {node.node_id} added block: {commit_message}")
+        # committed_message_count = len([msg for msg in node.committed_messages if commit_message["digest"] in msg])
+        # if committed_message_count >= (2 * self.faulty_nodes_count() + 1):
+        node.blockchain.add_block_to_blockchain(commit_message)
+        print(f"Node {node.node_id} added block: {commit_message}")
+        return None
 
     def handle_view_change(self, message: Dict[str, Any], node: 'Node') -> None:
         new_view = message["new_view"]
@@ -150,9 +151,9 @@ class PBFT(ConsensusAlgorithm):
         print(f"Starting new view: {new_view}")
         if self.nodes:
             self.primary_node = self.select_new_primary(new_view)
+            print(f"New primary selected: Node {self.primary_node.node_id}")
         else:
             print("Error: No nodes available to select a new primary.")
-
 
     def select_new_primary(self, new_view: int) -> 'Node':
         if len(self.nodes) > 0:
@@ -180,7 +181,7 @@ class PBFTNetwork:
             n.connect_to_peer(node.host, node.port)
             node.connect_to_peer(n.host, n.port)
         self.nodes.append(node)
-        self.consensus.set_nodes(self.nodes)  # 새 노드를 추가할 때 PBFT 인스턴스에 갱신
+        self.consensus.set_nodes(self.nodes) 
 
     def initialize_network(self) -> None:
         for node in self.nodes:
