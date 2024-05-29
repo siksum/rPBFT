@@ -1,39 +1,61 @@
+import time
 from network import Server, Client
-
+from typing import List, Set
 
 class Node:
-    def __init__(self, node_id, host, port, blockchain, consensus_algorithm):
-        self.node_id = node_id
-        self.host = host
-        self.port = port
-        self.blockchain = blockchain
-        self.consensus_algorithm = consensus_algorithm
+    def __init__(self, node_id: int, host: str, port: int, consensus_algorithm: object):
+        self.node_id: int = node_id
+        self.host: str = host
+        self.port: int = port
+        self.consensus_algorithm: object = consensus_algorithm
         self.server = Server(host, port, self)
         self.server.start()
-        self.peers = []
-        self.processed_messages = set()
-        self.pre_prepared_messages = set()
-        self.prepared_messages = set()
-        self.committed_messages = set()
+        self.peers: List[Client] = []
+        
+        self.processed_messages: Set[str] = set()
+        self.pre_prepared_messages: Set[str] = set()
+        self.prepared_messages: Set[str] = set()
+        self.committed_messages: Set[str] = set()
+        
+        self.is_primary: bool = False  
+        self.last_primary_message_time: int = int(time.time())
+        self.current_view_number: int = 0 
 
-    def detect_failure_and_request_view_change(self):
+
+    def monitor_primary(self) -> None:
+        while True:
+            if self.is_primary:
+                continue
+            if int(time.time()) - self.last_primary_message_time > self.consensus_algorithm.timeout_base:
+                self.detect_failure_and_request_view_change()
+            time.sleep(1)
+            
+    def detect_failure_and_request_view_change(self)-> None:
         print(f"Node {self.node_id} detected failure and is requesting view change.")
-        self.consensus_algorithm.request_view_change(self.node_id)
+        new_view = self.current_view_number + 1
+        self.consensus_algorithm.request_view_change(self.node_id, new_view)
 
-    def connect_to_peer(self, host, port):
+    def connect_to_peer(self, host: str, port: int) -> None:
         client = Client(host, port)
         self.peers.append(client)
 
-    def send_message_to_all(self, message):
+    def send_message_to_all(self, message: str) -> None:
         for peer in self.peers:
             peer.send_message(message)
 
-    def receive_message(self, message):
+    def receive_message(self, message: str) -> None:
         print(f"Node {self.node_id} received message: {message}")
         if message not in self.processed_messages:
             self.processed_messages.add(message)
-            self.pre_prepared_messages.add(message)
-            if message.startswith("PREPARE:"):
+            if self.is_primary:
+                self.last_primary_message_time = int(time.time())
+
+            if message.startswith("PRE-PREPARE:"):
+                request = message[len("PRE-PREPARE:"):]
+                self.pre_prepared_messages.add(request)
+                self.send_message_to_all(f"PREPARE:{request}")
+            
+            elif message.startswith("PREPARE:"):
                 request = message[len("PREPARE:"):]
                 if any(request in msg for msg in self.pre_prepared_messages):
                     self.consensus_algorithm.prepare(request, self)
@@ -44,6 +66,9 @@ class Node:
                 if request in self.prepared_messages:
                     self.consensus_algorithm.commit(request, self)
 
+            elif message.startswith("VIEW_CHANGE:"):
+                self.consensus_algorithm.handle_view_change(message, self)
+
             else:
                 self.consensus_algorithm.pre_prepare(message, self)
                 self.send_message_to_all(f"PREPARE:{message}")
@@ -51,7 +76,6 @@ class Node:
     def process_request(self, message):
         if message not in self.processed_messages:
             self.processed_messages.add(message)
-            self.pre_prepared_messages.add(message)
             self.consensus_algorithm.pre_prepare(message, self)
             self.send_message_to_all(f"PREPARE:{message}")
 
@@ -72,6 +96,7 @@ class Node:
         self.server.stop()
         for peer in self.peers:
             peer.close()
+
 
 
 class ClientNode:

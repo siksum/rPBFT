@@ -3,8 +3,8 @@ from typing import Dict
 
 class ViewChange:
     def __init__(self, node_id: int):
-        self._total_view_count: int = 0
-        self._current_view: Dict[str, int] = {}
+        self._total_view_number: int = 0
+        self._current_view_number: Dict[str, int] = {}
         self._view_change: bool = False
         self._view_change_count: int = 0
         self._node_id: int = node_id    
@@ -12,19 +12,19 @@ class ViewChange:
     def change_view(self) -> Dict[str, int]:
         self._view_change = True
         self._view_change_count += 1
-        self._total_view_count += 1
-        self._current_view = {f"View {self._total_view_count}": self._node_id}
-        return self._current_view
+        self._total_view_number += 1
+        self._current_view_number = {f"View {self._total_view_number}": self._node_id}
+        return self._current_view_number
     
     def reset_view_change(self) -> None:
         self._view_change = False
         self._view_change_count = 0
-        self._current_view = {}
-        self._total_view_count = 0
+        self._current_view_number = {}
+        self._total_view_number = 0
     
     @property
     def current_view(self) -> Dict[str, int]:
-        return self._current_view
+        return self._current_view_number
     
     @property
     def view_change_count(self) -> int:
@@ -36,7 +36,7 @@ class ViewChange:
     
     @property
     def total_view_count(self) -> int:
-        return self._total_view_count
+        return self._total_view_number
     
     @property
     def node_id(self) -> int:
@@ -48,6 +48,6 @@ class ViewChange:
     def __str__(self) -> str:
         return (f"View Change Status: {self._view_change}, "
                 f"View Change Count: {self._view_change_count}, "
-                f"Current View: {self._current_view}, "
-                f"Total View Count: {self._total_view_count}, "
+                f"Current View: {self._current_view_number}, "
+                f"Total View Count: {self._total_view_number}, "
                 f"Node ID: {self._node_id}")

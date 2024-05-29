@@ -21,7 +21,6 @@ class Blockchain:
             data=genesis_data,
             current_block_hash=genesis_hash
         )
-
     
     def get_latest_block(self)-> Block: 
         return self.chain[-1]
@@ -33,7 +32,7 @@ class Blockchain:
         current_block_hash: str = self.calculate_hash(index, previous_hash, timestamp, previous_block.data, previous_block.current_block_hash)
         return Block(index, previous_hash, timestamp, current_block_hash)
 
-    def add_block(self)-> List[Block]:
+    def add_block_to_blockchain(self)-> List[Block]:
         previous_block: Block = self.get_latest_block()
         new_block: Block = self.create_new_block(previous_block)
         self.chain.append(new_block)

@@ -16,7 +16,7 @@ class Test:
 
     def setup_nodes(self)-> None:
         for i in range(1, self.count_of_nodes + 1):
-            node:Node = Node(i, 'localhost', self.port + i, self.blockchain, self.pbft_algorithm)
+            node:Node = Node(i, 'localhost', self.port + i, self.pbft_algorithm)
             self.list_of_nodes.append(node)
 
     def initialize_network(self) -> None:
