@@ -1,10 +1,17 @@
 import time
 from network import Server, Client
-from typing import List, Set
+from typing import List, Set, Dict, TYPE_CHECKING, Any
+from blockchain import Blockchain
+
+if TYPE_CHECKING:
+    from pbft import PBFTNetwork, PBFT
+
 
 class Node:
-    def __init__(self, node_id: int, host: str, port: int, consensus_algorithm: object):
+    def __init__(self, node_id: int, node_tag: str, blockchain: Blockchain, host: str, port: int, consensus_algorithm: object):
         self.node_id: int = node_id
+        self.node_tag: str = node_tag
+        self.blockchain: Blockchain = blockchain
         self.host: str = host
         self.port: int = port
         self.consensus_algorithm: object = consensus_algorithm
@@ -41,100 +48,64 @@ class Node:
 
     def send_message_to_all(self, message: str) -> None:
         for peer in self.peers:
-            peer.send_message(message)
+            peer.send_message(str(message))
 
     def receive_message(self, message: str) -> None:
         print(f"Node {self.node_id} received message: {message}")
-        if message not in self.processed_messages:
-            self.processed_messages.add(message)
-            if self.is_primary:
-                self.last_primary_message_time = int(time.time())
-
-            if message.startswith("PRE-PREPARE:"):
-                request = message[len("PRE-PREPARE:"):]
-                self.pre_prepared_messages.add(request)
-                self.send_message_to_all(f"PREPARE:{request}")
-            
-            elif message.startswith("PREPARE:"):
-                request = message[len("PREPARE:"):]
-                if any(request in msg for msg in self.pre_prepared_messages):
-                    self.consensus_algorithm.prepare(request, self)
-                    self.send_message_to_all(f"COMMIT:{request}")
-
-            elif message.startswith("COMMIT:"):
-                request = message[len("COMMIT:"):]
-                if request in self.prepared_messages:
-                    self.consensus_algorithm.commit(request, self)
-
-            elif message.startswith("VIEW_CHANGE:"):
-                self.consensus_algorithm.handle_view_change(message, self)
-
-            else:
-                self.consensus_algorithm.pre_prepare(message, self)
-                self.send_message_to_all(f"PREPARE:{message}")
-
-    def process_request(self, message):
-        if message not in self.processed_messages:
-            self.processed_messages.add(message)
-            self.consensus_algorithm.pre_prepare(message, self)
-            self.send_message_to_all(f"PREPARE:{message}")
-
-    def process_prepare(self, request):
-        if request not in self.prepared_messages:
-            if request in self.pre_prepared_messages:
-                self.prepared_messages.add(request)
-                self.consensus_algorithm.prepare(request, self)
-                self.send_message_to_all(f"COMMIT:{request}")
-
-    def process_commit(self, request):
-        if request not in self.committed_messages:
-            if request in self.prepared_messages:
-                self.committed_messages.add(request)
-                self.consensus_algorithm.commit(request, self)
-
+        message_dict = eval(message)
+        self.consensus_algorithm.handle_message(message_dict, self)
+    
     def stop(self):
         self.server.stop()
         for peer in self.peers:
             peer.close()
+            
 
 
 
 class ClientNode:
-    def __init__(self, client_id, pbft_network, list_of_nodes):
-        self.client_node_id = client_id
-        self.pbft_network = pbft_network
-        self._request = None
-        self.list_of_nodes = list_of_nodes
-        self.primary_node = self.pbft_network.primary_node
+    def __init__(self, client_id: int, pbft_network: 'PBFTNetwork', list_of_nodes: List[Node]):
+        self.client_node_id: int = client_id
+        self.pbft_network: 'PBFTNetwork' = pbft_network
+        self.request_messages: Dict[str, Any] = {}
+        self.list_of_nodes: List[Node] = list_of_nodes
+        self.primary_node: PrimaryNode = self.pbft_network.primary_node
 
-    def send_request(self, request):
-        self._request = request
+    
+    def send_request(self, data: str, timestamp: int):
+        request= {
+            "stage": "REQUEST",
+            "data": data,
+            "timestamp": timestamp,
+            "client_id": self.client_node_id
+        }
+        self.request_messages = request
         if self.client_node_id == 0 and self.pbft_network.primary_node is not None:
             print(f"Client Node {self.client_node_id} send request to primary node")
-            self.pbft_network.broadcast_request(request)
+            self.pbft_network.broadcast_request(self.request_messages)
 
     @property
     def request(self):
-        return self._request
-
+        return self.request_messages   
 
 class PrimaryNode:
-    def __init__(self, primary_node, pbft_network, pbft):
-        self.node = primary_node
-        self.pbft_network = pbft_network
-        self.pbft = pbft
-        self._request = None
+    def __init__(self, primary_node: Node, pbft_network: 'PBFTNetwork', pbft: 'PBFT'):
+        self.primary_node: Node = primary_node
+        self.pbft_network: 'PBFTNetwork' = pbft_network
+        self.pbft: 'PBFT' = pbft
+        self._request: Dict = {}
 
     def broadcast_pre_prepare_message(self, request):
-        print(f"Primary Node {self.node.node_id} broadcasting pre-prepare message")
+        print(f"Primary Node {self.primary_node.node_id} broadcasting PRE-PREPARE message")
         self._request = request
-        self.pbft.pre_prepare(request, self.node)
+        self.pbft.pre_prepare(request, self.primary_node)
 
     def receive_request(self, request):
-        if request not in self.node.processed_messages:
-            self.node.process_request(request)
-            self.pbft.pre_prepare(request, self.node)
-        self.pbft.pre_prepare(request, self.node)
+        if request not in self.primary_node.processed_messages:
+            self.pbft.pre_prepare(request, self.primary_node)
+        else:
+            print(f"Primary Node {self.primary_node.node_id} already processed request: {request}")
+            #client에 문제가 있을때는 어떻게 처리할지 고민해보기 -> view change 해야 하는지?
 
     @property
     def request(self):

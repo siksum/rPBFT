@@ -16,8 +16,13 @@ class Test:
 
     def setup_nodes(self)-> None:
         for i in range(1, self.count_of_nodes + 1):
-            node:Node = Node(i, 'localhost', self.port + i, self.pbft_algorithm)
+            node:Node = Node(i, "right", self.blockchain, 'localhost', self.port + i, self.pbft_algorithm)
             self.list_of_nodes.append(node)
+            
+        for i in range(1, self.count_of_faulty_nodes + 1):
+            faulty_nodes = Node(i, "fault", self.blockchain, 'localhost', self.port + i, self.pbft_algorithm)
+            self.list_of_nodes.append(faulty_nodes)
+            
 
     def initialize_network(self) -> None:
         self.pbft_network = PBFTNetwork(self.list_of_nodes)
@@ -27,7 +32,7 @@ class Test:
         self.pbft_network.initialize_network()
     
     def send_request(self) -> None:
-        self.network_client.send_request("Transaction Data")
+        self.network_client.send_request("Transaction Data", int(time.time()))
         time.sleep(2)
         
     def print_blockchain(self) -> None:
@@ -49,7 +54,7 @@ class Test:
         
 if __name__ == "__main__":
     try:
-        test = Test(algorithm=PBFT(), count_of_nodes=4, count_of_faulty_nodes=1, port=5100, blocksize=10)
+        test = Test(algorithm=PBFT(), count_of_nodes=4, count_of_faulty_nodes=0, port=5100, blocksize=10)
         test.check_count_of_nodes()
         test.setup_nodes()
         test.initialize_network()
