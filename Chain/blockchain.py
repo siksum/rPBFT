@@ -2,6 +2,54 @@ import hashlib
 import time
 from typing import List, Dict
 
+class View:
+    def __init__(self, node_id: int):
+        self.total_view_count: int = 0
+        self.current_view: Dict[str, int] = {}
+        self.view_change: bool = False
+        self.view_change_count: int = 0
+        self.node_id: int = node_id    
+    
+    def change_view(self):
+        self.view_change = True
+        self.view_change_count += 1
+        self.total_view_count += 1
+        self.current_view = {f"View {self.total_view_count}": self.node_id}
+        return self.current_view
+    
+    def reset_view_change(self):
+        self.view_change = False
+        self.view_change_count = 0
+        self.current_view = {}
+        self.view_count = 0
+    
+    @property
+    def current_view(self)-> Dict[str, int]:
+        return self.current_view
+    
+    @property
+    def view_change_count(self)-> int:
+        return self.view_change_count
+    
+    @property
+    def view_change_status(self)-> bool:
+        return self.view_change
+    
+    @property
+    def total_view_count(self)-> int:
+        return self.total_view_count
+    
+    def set_node_id(self, node_id: int):
+        self.node_id = node_id
+    
+    @property   
+    def node_id(self)-> int:
+        return self.node_id
+    
+    def __str__(self):
+        return f"View Change Status: {self.view_change}, View Change Count: {self.view_change_count}, Current View: {self.current_view}, View Count: {self.total_view_count}, Node ID: {self.node_id}"    
+
+
 
 
 class Block:
@@ -84,3 +132,7 @@ class Blockchain:
     
     def calculate_hash(self, value: str) -> str:
         return hashlib.sha256(value.encode('utf-8')).hexdigest()
+    
+    @property
+    def updated_chain(self)-> List[Block]:
+        return self.chain

@@ -41,11 +41,6 @@ class Test:
 
     def check_count_of_nodes(self):
         assert self.count_of_nodes >= self.count_of_faulty_nodes * 3 + 1, "Count of nodes should be greater than 3f + 1"
-    
-class View:
-    def __init__(self):
-        self.view_count = 0
-        
 
         
 if __name__ == "__main__":
