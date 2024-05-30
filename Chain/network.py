@@ -1,5 +1,6 @@
 import socket
 import threading
+import time
 
 class Server:
     def __init__(self, host, port, node):
@@ -50,7 +51,6 @@ class Server:
             client.close()
         self.server_socket.close()
 
-
 class Client:
     def __init__(self, host, port):
         self.host = host
@@ -59,7 +59,26 @@ class Client:
         self.client_socket.connect((self.host, self.port))
 
     def send_message(self, message):
-        self.client_socket.sendall(message)
+        try:
+            self.client_socket.sendall(message)
+        except (BrokenPipeError, ConnectionResetError):
+            print(f"Failed to send message to {self.host}:{self.port}. Connection closed.")
+            self.reconnect()
 
+    def reconnect(self):
+        self.close()
+        try:
+            self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.client_socket.connect((self.host, self.port))
+            print(f"Reconnected to {self.host}:{self.port}")
+        except ConnectionRefusedError:
+            print(f"Connection refused by {self.host}:{self.port}. Retrying...")
+            time.sleep(0.1)  # Wait for a short time before retrying
+            self.reconnect()
+            
     def close(self):
+        try:
+            self.client_socket.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
         self.client_socket.close()
