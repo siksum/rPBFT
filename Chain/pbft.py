@@ -244,6 +244,14 @@ class PBFTHandler:
                 if node.node_id != peer.node_id:
                     node.connect_to_peer(peer.host, peer.port)
 
+    def select_random_primary(self) -> None:
+        original_primary = self.primary_node.node
+        self.primary_node = PrimaryNode(self.nodes[0], self.consensus)
+        self.primary_node.node.is_primary = True
+        original_primary.is_primary = False
+        self.nodes.append(original_primary)
+        self.nodes.remove(self.primary_node.node)
+        
     def stop(self) -> None:
         for node in self.nodes:
             node.stop()
