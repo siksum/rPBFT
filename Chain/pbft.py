@@ -53,6 +53,7 @@ class PBFTNetwork:
             for peer in self.nodes:
                 if node.node_id != peer.node_id:
                     node.connect_to_peer(peer.host, peer.port)
+                    node.pbft_network = self
 
 
     def stop(self):

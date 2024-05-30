@@ -13,6 +13,7 @@ class Node:
         self.port = port
         self.blockchain = blockchain
         self.consensus_algorithm = consensus_algorithm
+        self.pbft_network = None
         self.server = Server(host, port, self)
         self.server.start()
         self.peers = []
@@ -180,6 +181,8 @@ class Node:
 
         self.replies.append(reply)
         reply = json.dumps(reply).encode()
+        
+        self.pbft_network.client_node.receive_reply(reply)
 
         # block = self.create_block(pre_prepare.request)
         # if self.blockchain.is_valid_block(block):
@@ -205,6 +208,7 @@ class ClientNode:
         self.list_of_nodes = list_of_nodes
         self.nodes = []
         self.primary_node = self.pbft_network.primary_node
+        self.received_replies = []
             
     def send_request(self, request): # 1. request = "Transaction Data"
         self._request = request
@@ -213,6 +217,10 @@ class ClientNode:
             print(f"Client Node {self.client_node_id} send request to primary node")
             # self.list_of_nodes[0].receive_request = request
             self.pbft_network.broadcast_request(request)
+    
+    def receive_reply(self, reply):
+        print(f"[RECV_REPLY] Client Node {self.client_node_id} received reply: {reply}")
+        self.received_replies.append(reply)
 
     @property
     def request(self):
