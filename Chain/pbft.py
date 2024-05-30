@@ -32,6 +32,10 @@ class ConsensusAlgorithm(ABC):
     # @abstractmethod
     # def handle_view_change(self, message: Dict[str, Any], node: 'Node') -> None:
     #     pass
+def receive_prepare_message(count: int, faulty_nodes) -> bool:
+    if count >= (2 * faulty_nodes):
+        return True
+    return False
 
 class PBFT(ConsensusAlgorithm):
     def __init__(self):
@@ -40,8 +44,12 @@ class PBFT(ConsensusAlgorithm):
         self.timeout_base: float = 5.0
         self.current_timeout: float = self.timeout_base
         self.client_node: 'ClientNode' = None
+        self.count_of_faulty_nodes: int = 0
         self.nodes: List['Node'] = []
-
+        
+        self.pre_prepare_archive: List[Dict[str, Any]] = []
+        self.count_of_prepared = 0
+        
     def set_nodes(self, nodes: List['Node']) -> None:
         self.nodes = nodes
 
@@ -51,18 +59,27 @@ class PBFT(ConsensusAlgorithm):
 
             stage = message["stage"]
             if stage == "PRE-PREPARE" and node.is_primary == False: #prepare stage 시작 직전
-                if node.pre_prepare_messages_archive ==[]:
-                    node.pre_prepare_messages_archive.append(message)
-                    self.prepare(message, node)
+                node.pre_prepare_messages_archive.append(message)
+                if node.node_tag == "fault":
+                    return
+                self.prepare(message, node)
                     
-                else:
-                    self.prepare(message, node)
-                
             elif stage == "PREPARE":
-                if node.prepare_messages_archive ==[]:
-                    node.prepare_messages_archive.append(message)
+                node.prepare_messages_archive.append(message)
+                self.pre_prepare_archive.append(message)
+
+                if node.node_tag == "fault":
+                    return
+                
+                if node.validate_pre_prepare_message(message, self.pre_prepare_archive) is True:
+                    self.count_of_prepared += 1
+                    correct_prepare = receive_prepare_message(self.count_of_prepared, self.count_of_faulty_nodes)
+                    if correct_prepare is True:
+                        self.commit(message, node)
                 else:
-                    self.commit(message, node)
+                    print(f"Node {node.node_id} failed to validate prepare message.")
+                    return
+                
                     
             elif stage == "COMMIT":
                 if node.commit_messages_archive ==[]:
@@ -174,7 +191,8 @@ class PBFT(ConsensusAlgorithm):
         node.send_message_to_client(reply_message)
         
     def faulty_nodes_count(self) -> int:
-        faulty_nodes = sum(1 for node in self.nodes if node.node_tag == "fault")
+        faulty_nodes = len([node for node in self.nodes if node.node_tag == "fault"])
+        print("ff", faulty_nodes)
         return faulty_nodes
     
     # def handle_view_change(self, message: Dict[str, Any], node: 'Node') -> None:
@@ -218,6 +236,7 @@ class PBFTHandler:
         self.nodes: List['Node'] = nodes
         self.right_nodes = [node for node in nodes if node.node_tag == "right"]
         self.faulty_nodes = [node for node in nodes if node.node_tag == "fault"]
+        
         self.check_count_of_nodes()
     
         self.client_node: List['ClientNode'] = client_node
@@ -251,7 +270,7 @@ class PBFTHandler:
         original_primary.is_primary = False
         self.nodes.append(original_primary)
         self.nodes.remove(self.primary_node.node)
-        
+    
     def stop(self) -> None:
         for node in self.nodes:
             node.stop()

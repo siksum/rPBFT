@@ -70,7 +70,7 @@ class Node:
         
 
     def receive_message(self, message) -> None:
-        print(f"Node {self.node_id} received message: ", end="")
+        print(f"[Recieve] Node: {self.node_id}, ", end="")
         message_dict = eval(message)
         print(f"stage: {message_dict.get('stage')}, from: Node {message_dict.get('node_id')}")
         
@@ -82,6 +82,14 @@ class Node:
         #     return None
         
         self.consensus_algorithm.handle_message(message_dict, self)
+    
+    def validate_pre_prepare_message(self, message, pre_prepare_archive):
+        for pre_prepare_message in pre_prepare_archive:
+            if (pre_prepare_message['seq_num'] == message['seq_num'] and
+                    pre_prepare_message['digest'] == message['digest']):
+                return True
+        return False
+
     
     def stop(self):
         self.server.stop()
@@ -108,7 +116,7 @@ class ClientNode:
         }
         self.request_messages = request
         
-        print(f"Client Node {self.client_node_id} send request to primary node")
+        print(f"[Send] Client Node: {self.client_node_id} -> Primary Node: {request}")
         pbft_handler.send_request_to_primary(self.request_messages)
         
 
@@ -134,10 +142,9 @@ class PrimaryNode:
         self.pbft: 'PBFT' = pbft
 
     def receive_request(self, request):
-        print(f"Primary Node {self.node_id} received request: {request}")
+        print(f"[Recieve] Primary Node: {self.node_id}, content: {request}")
         self.node.pre_prepared_messages.append(request)
-        node = self.node
-        self.pbft.pre_prepare(request, node)
+        self.pbft.pre_prepare(request, self.node)
 
     @property
     def request(self):

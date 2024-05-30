@@ -61,6 +61,8 @@ class Test:
         for node in self.list_of_nodes:
             node.client_node = self.client_node
         
+        self.pbft_algorithm.count_of_faulty_nodes = len(self.pbft_handler.faulty_nodes)
+        
         self.pbft_handler.initialize_network()
     
     def send_request(self) -> None:
