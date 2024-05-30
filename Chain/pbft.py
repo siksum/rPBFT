@@ -55,9 +55,6 @@ class PBFTNetwork:
                     node.connect_to_peer(peer.host, peer.port)
                     node.pbft_network = self
 
-    def add_block_message(self):
-        pass
-
     def stop(self):
         for node in self.nodes:
             node.stop()

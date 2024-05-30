@@ -45,15 +45,19 @@ if __name__ == "__main__":
         # Send a request to the network
         network_client.send_request(request)
 
-        time.sleep(10)
+        time.sleep(2)
 
         # Print the blockchain and check if it is valid
-        # for block in blockchain.chain:
-        #     print(f"Block {block.index} [Hash: {block.current_block_hash}]")
+        
+        print("result after 2 seconds!")
+        
+        
+        for block in blockchain.chain:
+            print(f"Block {block.index} [Hash: {block.current_block_hash}]")
 
-        # # Check if the blockchain is valid
-        # is_valid = blockchain.is_chain_valid()
-        # print(f"Blockchain valid: {is_valid}")
+        # Check if the blockchain is valid
+        is_valid = blockchain.is_chain_valid()
+        print(f"Blockchain valid: {is_valid}")
 
         # # Add a new node to the network
         # new_node = Node(6, 'localhost', 5107, blockchain, pbft_algorithm)

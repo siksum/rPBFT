@@ -184,16 +184,10 @@ class Node:
         reply = json.dumps(reply).encode()
         
         self.pbft_network.client_node.receive_reply(reply)
+        print("[DONE]") 
+        # 클라이언트에게 보냈으면 블록 생성 절차 들어감    
+        self.blockchain.add_block(pre_prepare)
 
-        # block = self.create_block(pre_prepare.request)
-        # if self.blockchain.is_valid_block(block):
-        #     self.blockchain.add_block(block.data)
-        #     print(f"[EXEC_OP] Node {self.node_id} added block: {block.data}")
-        #     self.broadcast_blockchain()
-        # else:
-        #     print(f"[EXEC_OP] Node {self.node_id} created an invalid block")
-        # pass
-            
 
     def stop(self):
         self.server.stop()
