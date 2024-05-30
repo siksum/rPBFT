@@ -3,7 +3,7 @@ from typing import List, Dict, Any, TYPE_CHECKING
 import hashlib
 import time
 from view import ViewChange
-from node import PrimaryNode
+from node import PrimaryNode, ClientNode
 
 if TYPE_CHECKING:
     from node import Node
@@ -29,9 +29,9 @@ class ConsensusAlgorithm(ABC):
     def commit(self, prepare_message: Dict[str, Any], node: 'Node') -> None:
         pass
 
-    @abstractmethod
-    def handle_view_change(self, message: Dict[str, Any], node: 'Node') -> None:
-        pass
+    # @abstractmethod
+    # def handle_view_change(self, message: Dict[str, Any], node: 'Node') -> None:
+    #     pass
 
 class PBFT(ConsensusAlgorithm):
     def __init__(self):
@@ -39,6 +39,7 @@ class PBFT(ConsensusAlgorithm):
         self.view_change_requests: List[ViewChange] = []
         self.timeout_base: float = 5.0
         self.current_timeout: float = self.timeout_base
+        self.client_node: 'ClientNode' = None
         self.nodes: List['Node'] = []
 
     def set_nodes(self, nodes: List['Node']) -> None:
@@ -51,7 +52,7 @@ class PBFT(ConsensusAlgorithm):
                 node.last_primary_message_time = int(time.time())
 
             stage = message["stage"]
-            if stage == "PRE-PREPARE":
+            if stage == "PRE-PREPARE" and not node.is_primary:
                 self.pre_prepare(message, node)
             if stage == "PREPARE":
                 # if any(message["data"] in msg for msg in node.pre_prepared_messages):
@@ -89,88 +90,143 @@ class PBFT(ConsensusAlgorithm):
             "view": self.current_view,
             "seq_num": node.current_view_number,
             "digest": request_digest,
-            "data": request
+            "data": request,
+            "node_id": node.node_id,
+            "client_id": request["client_id"]
         }
-        node.pre_prepared_messages.add(str(pre_prepare_message))
-        node.send_message_to_all(pre_prepare_message)
+        pre_prepare_message_digest = hashlib.sha256(str(pre_prepare_message).encode()).hexdigest()
+        if pre_prepare_message_digest not in node.pre_prepared_messages:
+            node.pre_prepared_messages.add(pre_prepare_message_digest)
+            node.send_message_to_all(pre_prepare_message)
         
-        prepare_message= {
-            "stage": "PREPARE",
-            "view": self.current_view,
-            "seq_num": node.current_view_number,
-            "digest": request_digest,
-            "node_id": node.node_id
-        }
-        self.prepare(prepare_message, node)
+            prepare_message= {
+                "stage": "PREPARE",
+                "view": self.current_view,
+                "seq_num": node.current_view_number,
+                "digest": request_digest,
+                "node_id": node.node_id,
+                "client_id": request["client_id"]
+            }
+            self.prepare(prepare_message, node)
 
     def prepare(self, prepare_message: Dict[str, Any], node: 'Node') -> None:
         print(f"Node {node.node_id} prepare stage")
-        node.prepared_messages.add(str(prepare_message))
-        node.send_message_to_all(prepare_message)
+        prepare_message_digest = hashlib.sha256(str(prepare_message).encode()).hexdigest()
+        if prepare_message_digest not in node.prepared_messages:
+            if prepare_message_digest not in node.prepared_messages:
+                node.prepared_messages[prepare_message_digest] = set()
+            node.prepared_messages[prepare_message_digest].add(node.node_id)
+            node.send_message_to_all(prepare_message)
         
-        # prepared_message_count = len([msg for msg in node.prepared_messages if prepare_message["digest"] in msg])
-        # if prepared_message_count >= (2 * self.faulty_nodes_count() + 1):
-        commit_message = {
-            "stage": "COMMIT",
-            "view": prepare_message["view"],
-            "seq_num": prepare_message["seq_num"],
-            "digest": prepare_message["digest"],
-            "node_id": node.node_id
-        }
-        self.commit(commit_message, node)
+        prepare_count = sum(1 for msg in node.prepared_messages if prepare_message["digest"] in msg)
+        if self.faulty_nodes_count() == 0:
+            commit_message = {
+                "stage": "COMMIT",
+                "view": prepare_message["view"],
+                "seq_num": prepare_message["seq_num"],
+                "digest": prepare_message["digest"],
+                "node_id": node.node_id,
+                "client_id": prepare_message["client_id"]
+            }
+            self.commit(commit_message, node)
+        else:
+            if prepare_count >= (2 * self.faulty_nodes_count() + 1):
+                commit_message = {
+                    "stage": "COMMIT",
+                    "view": prepare_message["view"],
+                    "seq_num": prepare_message["seq_num"],
+                    "digest": prepare_message["digest"],
+                    "node_id": node.node_id,
+                    "client_id": prepare_message["client_id"]
+                }
+                self.commit(commit_message, node)
 
     def commit(self, commit_message: Dict[str, Any], node: 'Node') -> None:
         print(f"Node {node.node_id} commit stage")
-        node.committed_messages.add(str(commit_message))
-        node.send_message_to_all(commit_message)
-
-        # committed_message_count = len([msg for msg in node.committed_messages if commit_message["digest"] in msg])
-        # if committed_message_count >= (2 * self.faulty_nodes_count() + 1):
-        node.blockchain.add_block_to_blockchain(commit_message)
-        print(f"Node {node.node_id} added block: {commit_message}")
-        return None
-
-    def handle_view_change(self, message: Dict[str, Any], node: 'Node') -> None:
-        new_view = message["new_view"]
-        if new_view > self.current_view:
-            self.view_change_requests.append(ViewChange(node.node_id))
-            if self.check_view_change_agreement(new_view):
-                self.start_new_view(new_view)
-
-    def broadcast_view_change(self, view_change_message: Dict[str, Any]) -> None:
-        for node in self.nodes:
-            node.receive_message(view_change_message)
-
-    def check_view_change_agreement(self, new_view: int) -> bool:
-        count = sum(1 for vc in self.view_change_requests if vc.current_view == new_view)
-        return count >= (2 * self.faulty_nodes_count() + 1)
-
-    def start_new_view(self, new_view: int) -> None:
-        self.current_view = new_view
-        self.current_timeout = self.timeout_base
-        print(f"Starting new view: {new_view}")
-        if self.nodes:
-            self.primary_node = self.select_new_primary(new_view)
-            print(f"New primary selected: Node {self.primary_node.node_id}")
+        commit_message_digest = hashlib.sha256(str(commit_message).encode()).hexdigest()
+        if commit_message_digest not in node.committed_messages:
+            if commit_message_digest not in node.committed_messages:
+                node.committed_messages[commit_message_digest] = set()
+            node.committed_messages[commit_message_digest].add(node.node_id)
+            node.send_message_to_all(commit_message)
+                
+        commit_count = sum(1 for msg in node.committed_messages if commit_message["digest"] in msg)
+        
+        print(f"faulty_nodes_count: {self.faulty_nodes_count()}")
+        if self.faulty_nodes_count() == 0:
+                self.send_reply_to_client(commit_message, node)
         else:
-            print("Error: No nodes available to select a new primary.")
-
-    def select_new_primary(self, new_view: int) -> 'Node':
-        if len(self.nodes) > 0:
-            return self.nodes[new_view % len(self.nodes)]
-        else:
-            raise ValueError("No nodes available to select a new primary.")
-
+            if commit_count >= (2 * self.faulty_nodes_count() + 1):
+                self.send_reply_to_client(commit_message, node)
+    
+    def send_reply_to_client(self, commit_message: Dict[str, Any], node: 'Node') -> None:
+        print(f"Node {node.node_id} sending reply to client")
+        reply_message = {
+            "stage": "REPLY",
+            "view": commit_message["view"],
+            "timestamp": int(time.time()),
+            "client_id": commit_message["client_id"],
+            "digest": commit_message["digest"],
+            "node_id": node.node_id
+        }
+        node.send_message_to_client(reply_message)
+        
     def faulty_nodes_count(self) -> int:
-        return (len(self.nodes) - 1) // 3
+        faulty_nodes = sum(1 for node in self.nodes if node.node_tag == "fault")
+        return faulty_nodes
+    
+    # def handle_view_change(self, message: Dict[str, Any], node: 'Node') -> None:
+    #     new_view = message["new_view"]
+    #     if new_view > self.current_view:
+    #         self.view_change_requests.append(ViewChange(node.node_id))
+    #         if self.check_view_change_agreement(new_view):
+    #             self.start_new_view(new_view)
 
-class PBFTNetwork:
-    def __init__(self, nodes: List['Node']):
-        self.nodes = nodes
-        self.consensus = PBFT()
-        self.consensus.set_nodes(self.nodes)
-        self.primary_node = PrimaryNode(nodes[0], self, self.consensus)
-        self.client_node = None
+    # def broadcast_view_change(self, view_change_message: Dict[str, Any]) -> None:
+    #     for node in self.nodes:
+    #         node.receive_message(view_change_message)
+
+    # def check_view_change_agreement(self, new_view: int) -> bool:
+    #     count = sum(1 for vc in self.view_change_requests if vc.current_view == new_view)
+    #     return count >= (2 * self.faulty_nodes_count() + 1)
+
+    # def start_new_view(self, new_view: int) -> None:
+    #     self.current_view = new_view
+    #     self.current_timeout = self.timeout_base
+    #     print(f"Starting new view: {new_view}")
+    #     if self.nodes:
+    #         self.primary_node = self.select_new_primary(new_view)
+    #         print(f"New primary selected: Node {self.primary_node.node_id}")
+    #     else:
+    #         print("Error: No nodes available to select a new primary.")
+
+    # def select_new_primary(self, new_view: int) -> 'Node':
+    #     if len(self.nodes) > 0:
+    #         return self.nodes[new_view % len(self.nodes)]
+    #     else:
+    #         raise ValueError("No nodes available to select a new primary.")
+
+
+
+class PBFTHandler:
+    def __init__(self, blockchain, consensus, client_nodes: List['ClientNode'], nodes: List['Node']):
+        self.blockchain = blockchain
+        self.consensus = consensus
+        
+        self.nodes: List['Node'] = nodes
+        self.right_nodes = [node for node in nodes if node.node_tag == "right"]
+        self.faulty_nodes = [node for node in nodes if node.node_tag == "fault"]
+        self.check_count_of_nodes()
+    
+        self.client_nodes: List['ClientNode'] = client_nodes
+        print(f"Client Node ID: {self.client_nodes[0].client_node_id}")
+        # self.primary_node = PrimaryNode(nodes[0], self, self.consensus)
+        
+    def check_count_of_nodes(self) -> None:
+        if self.faulty_nodes is None:
+            assert len(self.nodes) >= 3, "Count of nodes should be greater than 3"
+        else:
+            assert len(self.nodes) >= len(self.faulty_nodes) * 3 + 1, "Count of nodes should be greater than 3f + 1"
 
     def broadcast_request(self, request: Dict[str, Any]) -> None:
         if self.client_node and request == self.client_node.request:
@@ -181,7 +237,6 @@ class PBFTNetwork:
             n.connect_to_peer(node.host, node.port)
             node.connect_to_peer(n.host, n.port)
         self.nodes.append(node)
-        self.consensus.set_nodes(self.nodes) 
 
     def initialize_network(self) -> None:
         for node in self.nodes:
