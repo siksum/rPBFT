@@ -27,11 +27,6 @@ class PBFT(ConsensusAlgorithm):
         pass
 
     def commit(self, commit, node):
-        print(f"Node {node.node_id} commit stage")
-        node.pre_prepared.append(commit)
-        processed_prepare = node.process_request(commit)
-        serialized_prepare = json.dumps(processed_prepare).encode()
-        node.send_message_to_all(serialized_prepare)
         pass
 
 
