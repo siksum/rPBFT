@@ -23,7 +23,7 @@ class Test:
         for i in range(1, self.count_of_client_nodes + 1):
             client_node = ClientNode(i, self.blockchain, self.list_of_nodes, port=self.port+i)
             self.list_of_client_nodes.append(client_node)
-            print(f"Client Node : {client_node.client_node_id}")
+            print(f"Client Node : {client_node.client_node_id}, port: {client_node.port}")
 
     def setup_nodes(self)-> None:
         for i in range(1, self.count_of_nodes + 1):
@@ -32,7 +32,8 @@ class Test:
                              RIGHT, 
                              self.blockchain, 
                              LOCALHOST, 
-                             self.port + i, self.pbft_algorithm)
+                             self.port + self.count_of_client_nodes+ i, 
+                             self.pbft_algorithm)
             self.list_of_nodes.append(node)
         
         self.primary_node = PrimaryNode(self.list_of_nodes[0], self.pbft_algorithm)
@@ -44,7 +45,7 @@ class Test:
                 FAULT, 
                 self.blockchain, 
                 LOCALHOST, 
-                self.port + len(self.list_of_nodes)+i, 
+                self.port + self.count_of_client_nodes + self.count_of_nodes +i, 
                 self.pbft_algorithm)
             self.list_of_nodes.append(faulty_nodes)
         
