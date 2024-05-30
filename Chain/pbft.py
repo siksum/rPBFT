@@ -219,7 +219,6 @@ class PBFTHandler:
         self.check_count_of_nodes()
     
         self.client_nodes: List['ClientNode'] = client_nodes
-        print(f"Client Node ID: {self.client_nodes[0].client_node_id}")
         # self.primary_node = PrimaryNode(nodes[0], self, self.consensus)
         
     def check_count_of_nodes(self) -> None:

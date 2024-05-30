@@ -6,12 +6,11 @@ import time
 from typing import List
 
 class Test:
-    def __init__(self, algorithm, count_of_client_nodes: int, count_of_nodes:int, count_of_faulty_nodes:int, port:int, blocksize:int):
+    def __init__(self, algorithm, count_of_nodes:int, count_of_faulty_nodes:int, port:int, blocksize:int):
         self.blockchain: Blockchain = Blockchain(blocksize)
         self.pbft_algorithm = algorithm
         
-        self.count_of_client_nodes: int = count_of_client_nodes
-        self.list_of_client_nodes: List[ClientNode] = []
+        self.client_node: ClientNode = []
         
         self.count_of_nodes: int = count_of_nodes
         self.list_of_nodes: List[Node] = []
@@ -20,46 +19,43 @@ class Test:
         self.port: int = port
     
     def setup_client_nodes(self) -> None:
-        for i in range(1, self.count_of_client_nodes + 1):
-            client_node = ClientNode(i, self.blockchain, self.list_of_nodes, port=self.port+i)
-            self.list_of_client_nodes.append(client_node)
-            print(f"Client Node : {client_node.client_node_id}, port: {client_node.port}")
+        client_node = ClientNode(0, self.blockchain, self.list_of_nodes, port=self.port)
+        self.client_node = client_node
+        print(f"Client Node: {client_node.client_node_id}, Port: {client_node.port}")
 
     def setup_nodes(self)-> None:
         for i in range(1, self.count_of_nodes + 1):
-            node:Node = Node(self.list_of_client_nodes, 
-                             i+self.count_of_client_nodes, 
+            node:Node = Node(self.client_node, 
+                             i, 
                              RIGHT, 
                              self.blockchain, 
                              LOCALHOST, 
-                             self.port + self.count_of_client_nodes+ i, 
+                             self.port + i, 
                              self.pbft_algorithm)
             self.list_of_nodes.append(node)
+            print(f"Right Nodes: {node.node_id}, Type:{node.node_tag} , Port: {node.port}")
+            
         
         self.primary_node = PrimaryNode(self.list_of_nodes[0], self.pbft_algorithm)
-        self.list_of_nodes[0] = self.primary_node
+        print(f"Primary Node: {self.primary_node.node_id}, Type:{self.primary_node.node_tag} , Port: {self.primary_node.node.port}")
            
         for i in range(1, self.count_of_faulty_nodes + 1):
-            faulty_nodes = Node(self.list_of_client_nodes, 
-                i+self.count_of_client_nodes+self.count_of_nodes, 
+            faulty_nodes = Node(self.client_node, 
+                i+self.count_of_nodes, 
                 FAULT, 
                 self.blockchain, 
                 LOCALHOST, 
-                self.port + self.count_of_client_nodes + self.count_of_nodes +i, 
+                self.port + self.count_of_nodes + i, 
                 self.pbft_algorithm)
             self.list_of_nodes.append(faulty_nodes)
-        
-        print(f"Primary Node: {self.list_of_nodes[0].node_id} is {self.list_of_nodes[0].node_tag}, port: {self.list_of_nodes[0].node.port}")
-        for node in self.list_of_nodes[1:]:
-            print(f"Node {node.node_id} is {node.node_tag}, port: {node.port}")
+            print(f"Faulty Nodes: {faulty_nodes.node_id}, Type:{faulty_nodes.node_tag} , Port: {faulty_nodes.port}")
+            
 
     def initialize_network(self) -> None:
-        self.pbft_handler = PBFTHandler(self.blockchain, self.pbft_algorithm, self.list_of_nodes)
-        print(self.pbft_handler.client_node.client_node_id)
-        self.client_id = self.pbft_handler.client_node.client_node_id
+        self.pbft_handler = PBFTHandler(self.blockchain, self.pbft_algorithm, self.client_node, self.list_of_nodes)
 
         for node in self.list_of_nodes:
-            node.client_node = self.list_of_client_nodes
+            node.client_node = self.client_node
         
         self.pbft_handler.initialize_network()
     
@@ -84,7 +80,7 @@ class Test:
         
 if __name__ == "__main__":
     try:
-        test = Test(algorithm=PBFT, count_of_client_nodes=2, count_of_nodes=4, count_of_faulty_nodes=1, port=5300, blocksize=10)
+        test = Test(algorithm=PBFT, count_of_nodes=3, count_of_faulty_nodes=1, port=5300, blocksize=10)
         test.setup_client_nodes()
         test.setup_nodes()
         # test.initialize_network()
