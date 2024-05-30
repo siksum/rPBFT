@@ -42,6 +42,7 @@ class Test:
             self.list_of_nodes.append(node)
         
         self.primary_node = PrimaryNode(self.list_of_nodes[0], self.pbft_algorithm)
+        self.primary_node.node.is_primary = True
            
         for i in range(1, self.count_of_faulty_nodes + 1):
             faulty_nodes = Node(self.client_node, 
@@ -83,7 +84,7 @@ class Test:
         
 if __name__ == "__main__":
     try:
-        test = Test(algorithm=PBFT, count_of_nodes=3, count_of_faulty_nodes=1, port=5300, blocksize=10)
+        test = Test(algorithm=PBFT(), count_of_nodes=3, count_of_faulty_nodes=1, port=5300, blocksize=10)
         test.setup_client_nodes()
         test.setup_nodes()
         test.initialize_network()

@@ -46,22 +46,31 @@ class PBFT(ConsensusAlgorithm):
         self.nodes = nodes
 
     def handle_message(self, message: Dict[str, Any], node: 'Node') -> None:
-        if str(message) not in node.processed_messages:
-            node.processed_messages.add(str(message))
             if node.is_primary:
                 node.last_primary_message_time = int(time.time())
 
             stage = message["stage"]
-            if stage == "PRE-PREPARE" and not node.is_primary:
-                self.pre_prepare(message, node)
-            if stage == "PREPARE":
-                # if any(message["data"] in msg for msg in node.pre_prepared_messages):
+            if stage == "PRE-PREPARE" and node.is_primary == False:
+                if node.pre_prepare_messages_archive ==[]:
+                    node.pre_prepare_messages_archive.append(message)
                     self.prepare(message, node)
+                    
+                else:
+                    self.prepare(message, node)
+                
+            elif stage == "PREPARE":
+                # if any(message["data"] in msg for msg in node.pre_prepared_messages):
+                if node.prepare_messages_archive ==[]:
+                    node.prepare_messages_archive.append(message)
+                else:
+                    self.commit(message, node)
+                    
             elif stage == "COMMIT":
                 # if message["data"] in node.prepared_messages:
-                    self.commit(message, node)
-            elif stage == "VIEW-CHANGE":
-                self.handle_view_change(message, node)
+                self.commit(message, node)
+                node.commit_messages_archive.append(message)
+            # elif stage == "VIEW-CHANGE":
+            #     self.handle_view_change(message, node)
 
     def request_view_change(self, node_id: int, new_view: int) -> None:
         view_change = ViewChange(node_id)
@@ -82,6 +91,7 @@ class PBFT(ConsensusAlgorithm):
 
     def pre_prepare(self, request: Dict[str, Any], node: 'Node') -> None:
         print(f"Node {node.node_id} pre-prepare stage")
+        
         request_digest = hashlib.sha256(str(request).encode()).hexdigest()
         pre_prepare_message = {
             "stage": "PRE-PREPARE",
@@ -95,20 +105,21 @@ class PBFT(ConsensusAlgorithm):
         if pre_prepare_message not in node.pre_prepared_messages:
             node.pre_prepared_messages.append(pre_prepare_message)
             node.send_message_to_all(pre_prepare_message)
-        
-            prepare_message= {
-                "stage": "PREPARE",
-                # "view": self.current_view,
-                "seq_num": node.prepared_messages,
-                "digest": request_digest,
-                "node_id": node.node_id,
-                "client_id": request["client_id"]
-            }
-            self.prepare(prepare_message, node)
+            
+
 
     def prepare(self, prepare_message: Dict[str, Any], node: 'Node') -> None:
         print(f"Node {node.node_id} prepare stage")
         prepare_message_digest = hashlib.sha256(str(prepare_message).encode()).hexdigest()
+        
+        prepare_message= {
+                "stage": "PREPARE",
+                # "view": self.current_view,
+                "seq_num": node.prepared_messages,
+                "digest": prepare_message_digest,
+                "node_id": node.node_id,
+                "client_id": prepare_message["client_id"]
+        }
         if prepare_message_digest not in node.prepared_messages:
             if prepare_message_digest not in node.prepared_messages:
                 node.prepared_messages[prepare_message_digest] = set()

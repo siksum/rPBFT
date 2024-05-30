@@ -9,14 +9,14 @@ if TYPE_CHECKING:
 
 
 class Node:
-    def __init__(self, client_node: 'ClientNode', node_id: int, node_tag: str, blockchain: Blockchain, host: str, port: int, consensus_algorithm: object):
+    def __init__(self, client_node: 'ClientNode', node_id: int, node_tag: str, blockchain: Blockchain, host: str, port: int, consensus_algorithm):
         self.client_node: 'ClientNode' = client_node
         self.node_id: int = node_id
         self.node_tag: str = node_tag
         self.blockchain: Blockchain = blockchain
         self.host: str = host
         self.port: int = port
-        self.consensus_algorithm: object = consensus_algorithm
+        self.consensus_algorithm = consensus_algorithm
         self.server = Server(host, port, self)
         self.server.start()
         self.peers: List[Client] = []
@@ -74,26 +74,6 @@ class Node:
         message_dict = eval(message)
         print(f"stage: {message_dict.get('stage')}, from: Node {message_dict.get('node_id')}")
         
-        message_hash = message_dict.get('digest')
-        
-        all_archives = [
-            self.pre_prepare_messages_archive,
-            self.prepare_messages_archive,
-            self.commit_messages_archive,
-        ]
-        
-        for archive in all_archives:
-            if any(msg.get('digest') == message_hash for msg in archive):
-                print(f"Node {self.node_id} already processed message: {message}")
-                return None
-            
-        if message_dict.get('stage') == "PRE-PREPARE":
-            self.pre_prepare_messages_archive.append(message_dict)
-        elif message_dict.get('stage') == "PREPARE":
-            self.prepare_messages_archive.append(message_dict)
-        elif message_dict.get('stage') == "COMMIT":
-            self.commit_messages_archive.append(message_dict)
-
             
         # else:
         #     self.request_messages_archive.append(message_dict)
@@ -102,7 +82,6 @@ class Node:
         #     print(f"Node {self.node_id} already processed message: {message}")
         #     return None
         
-        self.processed_messages.add(message_hash)
         self.consensus_algorithm.handle_message(message_dict, self)
     
     def stop(self):
@@ -159,7 +138,7 @@ class PrimaryNode:
         print(f"Primary Node {self.node_id} received request: {request}")
         self.node.pre_prepared_messages.append(request)
         node = self.node
-        self.pbft.pre_prepare(self, request, node)
+        self.pbft.pre_prepare(request, node)
 
     @property
     def request(self):
