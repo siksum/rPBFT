@@ -23,7 +23,7 @@ class Test:
         """_summary_
             클라이언트 노드를 설정 -> 0번 노드가 클라이언트 노드
         """
-        client_node = ClientNode(0, self.blockchain, self.pbft_handler, self.list_of_nodes, port=self.port)
+        client_node = ClientNode(0, self.blockchain, self.list_of_nodes, port=self.port)
         self.client_node = client_node
 
     def setup_nodes(self)-> None:
@@ -57,15 +57,13 @@ class Test:
     def initialize_network(self) -> None:
         self.pbft_handler = PBFTHandler(self.blockchain, self.pbft_algorithm, self.client_node, self.list_of_nodes) 
         
-        self.client_node.pbft_handler = self.pbft_handler
-        
         for node in self.list_of_nodes:
             node.client_node = self.client_node
         
         self.pbft_handler.initialize_network()
     
     def send_request(self) -> None:
-        self.client_node.send_request("Transaction Data", int(time.time()))
+        self.client_node.send_request(self.pbft_handler, "Transaction Data", int(time.time()))
         time.sleep(2)
         
     def print_blockchain(self) -> None:

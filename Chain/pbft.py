@@ -96,7 +96,7 @@ class PBFT(ConsensusAlgorithm):
         }
         pre_prepare_message_digest = hashlib.sha256(str(pre_prepare_message).encode()).hexdigest()
         if pre_prepare_message_digest not in node.pre_prepared_messages:
-            node.pre_prepared_messages.add(pre_prepare_message_digest)
+            node.pre_prepared_messages.append(pre_prepare_message_digest)
             node.send_message_to_all(pre_prepare_message)
         
             prepare_message= {
@@ -219,7 +219,7 @@ class PBFTHandler:
         self.check_count_of_nodes()
     
         self.client_node: List['ClientNode'] = client_node
-        # self.primary_node = PrimaryNode(nodes[0], self, self.consensus)
+        self.primary_node = PrimaryNode(nodes[0], self.consensus)
         
     def check_count_of_nodes(self) -> None:
         if self.faulty_nodes is None:
@@ -227,9 +227,8 @@ class PBFTHandler:
         else:
             assert len(self.nodes) >= len(self.faulty_nodes) * 3 + 1, "Count of nodes should be greater than 3f + 1"
 
-    def broadcast_request(self, request: Dict[str, Any]) -> None:
-        if self.client_node and request == self.client_node.request:
-            self.primary_node.broadcast_pre_prepare_message(request)
+    def send_request_to_primary(self, request: Dict[str, Any]) -> None:
+        self.primary_node.receive_request(request)
 
     def add_node(self, node: 'Node') -> None:
         for n in self.nodes:
