@@ -50,7 +50,7 @@ class PBFT(ConsensusAlgorithm):
                 node.last_primary_message_time = int(time.time())
 
             stage = message["stage"]
-            if stage == "PRE-PREPARE" and node.is_primary == False:
+            if stage == "PRE-PREPARE" and node.is_primary == False: #prepare stage 시작 직전
                 if node.pre_prepare_messages_archive ==[]:
                     node.pre_prepare_messages_archive.append(message)
                     self.prepare(message, node)
@@ -59,11 +59,15 @@ class PBFT(ConsensusAlgorithm):
                     self.prepare(message, node)
                 
             elif stage == "PREPARE":
+                ("Aa")
                 # if any(message["data"] in msg for msg in node.pre_prepared_messages):
-                if node.prepare_messages_archive ==[]:
-                    node.prepare_messages_archive.append(message)
-                else:
-                    self.commit(message, node)
+                node.prepare_messages_archive.append(message)
+                
+                # if node.prepare_messages_archive ==[]:
+                #     # if len
+                #     node.prepare_messages_archive.append(message)
+                # else:
+                #     self.commit(message, node)
                     
             elif stage == "COMMIT":
                 # if message["data"] in node.prepared_messages:
@@ -108,46 +112,42 @@ class PBFT(ConsensusAlgorithm):
             
 
 
-    def prepare(self, prepare_message: Dict[str, Any], node: 'Node') -> None:
+    def prepare(self, pre_prepare_message: Dict[str, Any], node: 'Node') -> None:
         print(f"Node {node.node_id} prepare stage")
-        prepare_message_digest = hashlib.sha256(str(prepare_message).encode()).hexdigest()
-        
+        pre_prepare_message_digest = hashlib.sha256(str(pre_prepare_message).encode()).hexdigest()
         prepare_message= {
-                "stage": "PREPARE",
-                # "view": self.current_view,
-                "seq_num": node.prepared_messages,
-                "digest": prepare_message_digest,
-                "node_id": node.node_id,
-                "client_id": prepare_message["client_id"]
+            "stage": "PREPARE",
+            # "view": self.current_view,
+            "seq_num": node.prepared_seqnum,
+            "digest": pre_prepare_message_digest,
+            "node_id": node.node_id,
+            "client_id": pre_prepare_message["client_id"]
         }
-        if prepare_message_digest not in node.prepared_messages:
-            if prepare_message_digest not in node.prepared_messages:
-                node.prepared_messages[prepare_message_digest] = set()
-            node.prepared_messages[prepare_message_digest].add(node.node_id)
+        if prepare_message not in node.prepared_messages:
+            node.prepared_messages.append(prepare_message)
             node.send_message_to_all(prepare_message)
-        
-        prepare_count = sum(1 for msg in node.prepared_messages if prepare_message["digest"] in msg)
-        if self.faulty_nodes_count() == 0:
-            commit_message = {
-                "stage": "COMMIT",
-                "view": prepare_message["view"],
-                "seq_num": prepare_message["seq_num"],
-                "digest": prepare_message["digest"],
-                "node_id": node.node_id,
-                "client_id": prepare_message["client_id"]
-            }
-            self.commit(commit_message, node)
-        else:
-            if prepare_count >= (2 * self.faulty_nodes_count() + 1):
-                commit_message = {
-                    "stage": "COMMIT",
-                    "view": prepare_message["view"],
-                    "seq_num": prepare_message["seq_num"],
-                    "digest": prepare_message["digest"],
-                    "node_id": node.node_id,
-                    "client_id": prepare_message["client_id"]
-                }
-                self.commit(commit_message, node)
+            
+        # if self.faulty_nodes_count() == 0:
+        #     commit_message = {
+        #         "stage": "COMMIT",
+        #         "view": prepare_message["view"],
+        #         "seq_num": prepare_message["seq_num"],
+        #         "digest": prepare_message["digest"],
+        #         "node_id": node.node_id,
+        #         "client_id": prepare_message["client_id"]
+        #     }
+        #     self.commit(commit_message, node)
+        # else:
+        #     if prepare_count >= (2 * self.faulty_nodes_count() + 1):
+        #         commit_message = {
+        #             "stage": "COMMIT",
+        #             "view": prepare_message["view"],
+        #             "seq_num": prepare_message["seq_num"],
+        #             "digest": prepare_message["digest"],
+        #             "node_id": node.node_id,
+        #             "client_id": prepare_message["client_id"]
+        #         }
+        #         self.commit(commit_message, node)
 
     def commit(self, commit_message: Dict[str, Any], node: 'Node') -> None:
         print(f"Node {node.node_id} commit stage")

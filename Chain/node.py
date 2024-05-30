@@ -74,7 +74,6 @@ class Node:
         message_dict = eval(message)
         print(f"stage: {message_dict.get('stage')}, from: Node {message_dict.get('node_id')}")
         
-            
         # else:
         #     self.request_messages_archive.append(message_dict)
         
