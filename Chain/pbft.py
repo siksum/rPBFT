@@ -59,20 +59,16 @@ class PBFT(ConsensusAlgorithm):
                     self.prepare(message, node)
                 
             elif stage == "PREPARE":
-                ("Aa")
-                # if any(message["data"] in msg for msg in node.pre_prepared_messages):
-                node.prepare_messages_archive.append(message)
-                
-                # if node.prepare_messages_archive ==[]:
-                #     # if len
-                #     node.prepare_messages_archive.append(message)
-                # else:
-                #     self.commit(message, node)
+                if node.prepare_messages_archive ==[]:
+                    node.prepare_messages_archive.append(message)
+                else:
+                    self.commit(message, node)
                     
             elif stage == "COMMIT":
-                # if message["data"] in node.prepared_messages:
-                self.commit(message, node)
-                node.commit_messages_archive.append(message)
+                if node.commit_messages_archive ==[]:
+                    node.commit_messages_archive.append(message)
+                else:
+                    self.send_reply_to_client(message, node)
             # elif stage == "VIEW-CHANGE":
             #     self.handle_view_change(message, node)
 
@@ -127,16 +123,20 @@ class PBFT(ConsensusAlgorithm):
             node.prepared_messages.append(prepare_message)
             node.send_message_to_all(prepare_message)
             
+
+    def commit(self, prepare_message: Dict[str, Any], node: 'Node') -> None:
+        print(f"Node {node.node_id} commit stage")
+        prepare_message_digest = hashlib.sha256(str(prepare_message).encode()).hexdigest()
+        
         # if self.faulty_nodes_count() == 0:
-        #     commit_message = {
-        #         "stage": "COMMIT",
-        #         "view": prepare_message["view"],
-        #         "seq_num": prepare_message["seq_num"],
-        #         "digest": prepare_message["digest"],
-        #         "node_id": node.node_id,
-        #         "client_id": prepare_message["client_id"]
-        #     }
-        #     self.commit(commit_message, node)
+        commit_message = {
+            "stage": "COMMIT",
+            # "view": prepare_message["view"],
+            "seq_num": node.committed_seqnum,
+            "digest": prepare_message["digest"],
+            "node_id": node.node_id,
+            "client_id": prepare_message["client_id"]
+        }
         # else:
         #     if prepare_count >= (2 * self.faulty_nodes_count() + 1):
         #         commit_message = {
@@ -148,24 +148,18 @@ class PBFT(ConsensusAlgorithm):
         #             "client_id": prepare_message["client_id"]
         #         }
         #         self.commit(commit_message, node)
-
-    def commit(self, commit_message: Dict[str, Any], node: 'Node') -> None:
-        print(f"Node {node.node_id} commit stage")
-        commit_message_digest = hashlib.sha256(str(commit_message).encode()).hexdigest()
-        if commit_message_digest not in node.committed_messages:
-            if commit_message_digest not in node.committed_messages:
-                node.committed_messages[commit_message_digest] = set()
-            node.committed_messages[commit_message_digest].add(node.node_id)
+        if prepare_message not in node.committed_messages:
+            node.committed_messages.append(prepare_message)
             node.send_message_to_all(commit_message)
                 
-        commit_count = sum(1 for msg in node.committed_messages if commit_message["digest"] in msg)
+        # commit_count = sum(1 for msg in node.committed_messages if commit_message["digest"] in msg)
         
-        print(f"faulty_nodes_count: {self.faulty_nodes_count()}")
-        if self.faulty_nodes_count() == 0:
-                self.send_reply_to_client(commit_message, node)
-        else:
-            if commit_count >= (2 * self.faulty_nodes_count() + 1):
-                self.send_reply_to_client(commit_message, node)
+        # print(f"faulty_nodes_count: {self.faulty_nodes_count()}")
+        # if self.faulty_nodes_count() == 0:
+        #         self.send_reply_to_client(commit_message, node)
+        # else:
+        #     if commit_count >= (2 * self.faulty_nodes_count() + 1):
+        #         self.send_reply_to_client(commit_message, node)
     
     def send_reply_to_client(self, commit_message: Dict[str, Any], node: 'Node') -> None:
         print(f"Node {node.node_id} sending reply to client")
