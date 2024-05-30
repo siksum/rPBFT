@@ -85,17 +85,16 @@ class Node:
             
 
 class ClientNode:
-    def __init__(self, client_id: int, blockchain:'Blockchain', list_of_nodes: List[Node], port: int) -> None:
+    def __init__(self, client_id: int, blockchain:'Blockchain', pbft_handler:'PBFTHandler' , list_of_nodes: List[Node], port: int) -> None:
         self.client_node_id: int = client_id
         self.blockchain: 'Blockchain' = blockchain
         self.port: int = port
-        # self.pbft_network: 'PBFTHandler' = pbft_network
+        self.pbft_handler: 'PBFTHandler' = pbft_handler
         self.request_messages: Dict[str, Any] = {}
         self.list_of_nodes: List[Node] = list_of_nodes
-        # self.primary_node: PrimaryNode = self.pbft_network.primary_node
+        # self.primary_node: PrimaryNode = self.pbft_handler.primary_node
         self.received_replies: Dict[str, int] = {}
         
-
     
     def send_request(self, data: str, timestamp: int):
         request= {
@@ -105,9 +104,9 @@ class ClientNode:
             "client_id": self.client_node_id
         }
         self.request_messages = request
-        if self.client_node_id == 0 and self.pbft_network.primary_node is not None:
-            print(f"Client Node {self.client_node_id} send request to primary node")
-            self.pbft_network.broadcast_request(self.request_messages)
+        
+        print(f"Client Node {self.client_node_id} send request to primary node")
+        self.pbft_handler.broadcast_request(self.request_messages)
 
     def receive_reply(self, reply_message: Dict[str, Any]) -> None:
         digest = reply_message["digest"]

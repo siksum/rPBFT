@@ -209,7 +209,7 @@ class PBFT(ConsensusAlgorithm):
 
 
 class PBFTHandler:
-    def __init__(self, blockchain, consensus, client_nodes: List['ClientNode'], nodes: List['Node']):
+    def __init__(self, blockchain, consensus, client_node: List['ClientNode'], nodes: List['Node']):
         self.blockchain = blockchain
         self.consensus = consensus
         
@@ -218,7 +218,7 @@ class PBFTHandler:
         self.faulty_nodes = [node for node in nodes if node.node_tag == "fault"]
         self.check_count_of_nodes()
     
-        self.client_nodes: List['ClientNode'] = client_nodes
+        self.client_node: List['ClientNode'] = client_node
         # self.primary_node = PrimaryNode(nodes[0], self, self.consensus)
         
     def check_count_of_nodes(self) -> None:

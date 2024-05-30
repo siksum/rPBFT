@@ -9,6 +9,7 @@ class Test:
     def __init__(self, algorithm, count_of_nodes:int, count_of_faulty_nodes:int, port:int, blocksize:int):
         self.blockchain: Blockchain = Blockchain(blocksize)
         self.pbft_algorithm = algorithm
+        self.pbft_handler: PBFTHandler = None
         
         self.client_node: ClientNode = []
         
@@ -19,11 +20,17 @@ class Test:
         self.port: int = port
     
     def setup_client_nodes(self) -> None:
-        client_node = ClientNode(0, self.blockchain, self.list_of_nodes, port=self.port)
+        """_summary_
+            클라이언트 노드를 설정 -> 0번 노드가 클라이언트 노드
+        """
+        client_node = ClientNode(0, self.blockchain, self.pbft_handler, self.list_of_nodes, port=self.port)
         self.client_node = client_node
-        print(f"Client Node: {client_node.client_node_id}, Port: {client_node.port}")
 
     def setup_nodes(self)-> None:
+        """_summary_
+            리스트에 노드를 추가하고, primary node를 설정 -> 1번 노드가 primary node
+            view change때는 랜덤으로 primary node를 설정
+        """
         for i in range(1, self.count_of_nodes + 1):
             node:Node = Node(self.client_node, 
                              i, 
@@ -33,11 +40,8 @@ class Test:
                              self.port + i, 
                              self.pbft_algorithm)
             self.list_of_nodes.append(node)
-            print(f"Right Nodes: {node.node_id}, Type:{node.node_tag} , Port: {node.port}")
-            
         
         self.primary_node = PrimaryNode(self.list_of_nodes[0], self.pbft_algorithm)
-        print(f"Primary Node: {self.primary_node.node_id}, Type:{self.primary_node.node_tag} , Port: {self.primary_node.node.port}")
            
         for i in range(1, self.count_of_faulty_nodes + 1):
             faulty_nodes = Node(self.client_node, 
@@ -48,19 +52,20 @@ class Test:
                 self.port + self.count_of_nodes + i, 
                 self.pbft_algorithm)
             self.list_of_nodes.append(faulty_nodes)
-            print(f"Faulty Nodes: {faulty_nodes.node_id}, Type:{faulty_nodes.node_tag} , Port: {faulty_nodes.port}")
-            
+    
 
     def initialize_network(self) -> None:
-        self.pbft_handler = PBFTHandler(self.blockchain, self.pbft_algorithm, self.client_node, self.list_of_nodes)
-
+        self.pbft_handler = PBFTHandler(self.blockchain, self.pbft_algorithm, self.client_node, self.list_of_nodes) 
+        
+        self.client_node.pbft_handler = self.pbft_handler
+        
         for node in self.list_of_nodes:
             node.client_node = self.client_node
         
         self.pbft_handler.initialize_network()
     
     def send_request(self) -> None:
-        self.list_of_client_nodes.send_request("Transaction Data", int(time.time()))
+        self.client_node.send_request("Transaction Data", int(time.time()))
         time.sleep(2)
         
     def print_blockchain(self) -> None:
@@ -83,8 +88,8 @@ if __name__ == "__main__":
         test = Test(algorithm=PBFT, count_of_nodes=3, count_of_faulty_nodes=1, port=5300, blocksize=10)
         test.setup_client_nodes()
         test.setup_nodes()
-        # test.initialize_network()
-        # test.send_request()
+        test.initialize_network()
+        test.send_request()
         # test.print_blockchain()
         # test.check_blockchain_validity()
         
