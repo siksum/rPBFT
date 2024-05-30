@@ -173,6 +173,7 @@ class Node:
 
         reply = {
             "message_type": "Reply",
+            "sender": self.node_id,
             "view_num": self.view_num,
             "timestamp": json.loads(pre_prepare["request"].replace("'", "\""))["timestamp"],
             "client_id": 0,
