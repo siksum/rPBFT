@@ -60,13 +60,7 @@ class Node:
     def send_message_to_all(self, message: str) -> None:
         for peer in self.peers:
             peer.send_message(str(message))
-        
-
-    def send_message_to_client(self, message: str) -> None:
-        message_str = str(message)
-        if message_str not in self.processed_messages:
-            self.processed_messages.add(message_str)
-            self.client_node.receive_reply(message)
+    
         
 
     def receive_message(self, message) -> None:
@@ -83,13 +77,12 @@ class Node:
         
         self.consensus_algorithm.handle_message(message_dict, self)
     
-    def validate_pre_prepare_message(self, message, pre_prepare_archive):
-        for pre_prepare_message in pre_prepare_archive:
-            if (pre_prepare_message['seq_num'] == message['seq_num'] and
-                    pre_prepare_message['digest'] == message['digest']):
+    def validate_message(self, message, message_archive):
+        for message_of_stage in message_archive:
+            if (message_of_stage['seq_num'] == message['seq_num'] and
+                    message_of_stage['digest'] == message['digest']):
                 return True
         return False
-
     
     def stop(self):
         self.server.stop()
@@ -104,7 +97,8 @@ class ClientNode:
         self.port: int = port
         self.request_messages: Dict[str, Any] = {}
         self.list_of_nodes: List[Node] = list_of_nodes
-        self.received_replies: Dict[str, int] = {}
+        self.received_replies: List[Dict[str, Any]] = []
+        self.count_of_replies: int = 0
         
     
     def send_request(self, pbft_handler:'PBFTHandler', data: str, timestamp: int):
@@ -120,16 +114,24 @@ class ClientNode:
         pbft_handler.send_request_to_primary(self.request_messages)
         
 
-    def receive_reply(self, reply_message: Dict[str, Any]) -> None:
-        digest = reply_message["digest"]
-        if digest not in self.received_replies:
-            self.received_replies[digest] = 0
-        self.received_replies[digest] += 1
-        print(f"Client Node {self.client_node_id} received reply: {reply_message}")
-        if self.received_replies[digest] >= (len(self.list_of_nodes) - 1) // 3 + 1:
-            self.blockchain.add_block_to_blockchain(reply_message)
-            print(f"Client Node added block: {reply_message}")
+    def receive_reply(self, reply_message: Dict[str, Any], count_of_faulty_nodes) -> None:
+        self.count_of_replies += 1
+        self.received_replies.append(reply_message)
+        print(f"[Recieve] Client Node: {self.client_node_id} received reply: {reply_message}")
         
+        if self.count_of_replies >= count_of_faulty_nodes + 1:
+            if self.validate_reply(reply_message, self.received_replies) is True:
+                self.blockchain.add_block_to_blockchain(reply_message)
+                print(f"Client Node added block: {reply_message}")
+        else:
+            print(f"Client Node: {self.client_node_id} received {self.count_of_replies} replies.")
+    
+    def validate_reply(self, reply_message: Dict[str, Any], received_replies) -> None:
+        for message_of_stage in received_replies:
+            if message_of_stage['digest'] == reply_message['digest']:
+                return True
+        return False
+    
     @property
     def request(self):
         return self.request_messages   

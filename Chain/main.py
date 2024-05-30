@@ -91,7 +91,7 @@ if __name__ == "__main__":
         test.setup_nodes()
         test.initialize_network()
         test.send_request()
-        # test.print_blockchain()
+        test.print_blockchain()
         # test.check_blockchain_validity()
         
         # test.test_view_change()

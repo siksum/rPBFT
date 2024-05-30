@@ -37,6 +37,11 @@ def receive_prepare_message(count: int, faulty_nodes) -> bool:
         return True
     return False
 
+def receive_commit_message(count: int, faulty_nodes) -> bool:
+    if count >= (2 * faulty_nodes + 1):
+        return True
+    return False
+
 class PBFT(ConsensusAlgorithm):
     def __init__(self):
         self.current_view: int = 0
@@ -49,6 +54,12 @@ class PBFT(ConsensusAlgorithm):
         
         self.pre_prepare_archive: List[Dict[str, Any]] = []
         self.count_of_prepared = 0
+        
+        self.prepare_archive: List[Dict[str, Any]] = []
+        self.count_of_prepared = 0
+        
+        self.commit_archive: List[Dict[str, Any]] = []
+        self.count_of_committed = 0
         
     def set_nodes(self, nodes: List['Node']) -> None:
         self.nodes = nodes
@@ -71,7 +82,7 @@ class PBFT(ConsensusAlgorithm):
                 if node.node_tag == "fault":
                     return
                 
-                if node.validate_pre_prepare_message(message, self.pre_prepare_archive) is True:
+                if node.validate_message(message, self.pre_prepare_archive) is True:
                     self.count_of_prepared += 1
                     correct_prepare = receive_prepare_message(self.count_of_prepared, self.count_of_faulty_nodes)
                     if correct_prepare is True:
@@ -79,13 +90,22 @@ class PBFT(ConsensusAlgorithm):
                 else:
                     print(f"Node {node.node_id} failed to validate prepare message.")
                     return
-                
                     
             elif stage == "COMMIT":
-                if node.commit_messages_archive ==[]:
-                    node.commit_messages_archive.append(message)
+                node.commit_messages_archive.append(message)
+                self.prepare_archive.append(message)
+                
+                if node.node_tag == "fault":
+                    return
+                
+                if node.validate_message(message, self.prepare_archive) is True:
+                    self.count_of_committed += 1
+                    correct_commit = receive_commit_message(self.count_of_committed, self.count_of_faulty_nodes)
+                    if correct_commit is True:
+                        self.send_reply_to_client(message, node)
                 else:
-                    self.send_reply_to_client(message, node)
+                    print(f"Node {node.node_id} failed to validate commit message.")
+                    return
             # elif stage == "VIEW-CHANGE":
             #     self.handle_view_change(message, node)
 
@@ -145,56 +165,34 @@ class PBFT(ConsensusAlgorithm):
         print(f"Node {node.node_id} commit stage")
         prepare_message_digest = hashlib.sha256(str(prepare_message).encode()).hexdigest()
         
-        # if self.faulty_nodes_count() == 0:
         commit_message = {
             "stage": "COMMIT",
             # "view": prepare_message["view"],
             "seq_num": node.committed_seqnum,
-            "digest": prepare_message["digest"],
+            "digest": prepare_message_digest,
             "node_id": node.node_id,
             "client_id": prepare_message["client_id"]
         }
-        # else:
-        #     if prepare_count >= (2 * self.faulty_nodes_count() + 1):
-        #         commit_message = {
-        #             "stage": "COMMIT",
-        #             "view": prepare_message["view"],
-        #             "seq_num": prepare_message["seq_num"],
-        #             "digest": prepare_message["digest"],
-        #             "node_id": node.node_id,
-        #             "client_id": prepare_message["client_id"]
-        #         }
-        #         self.commit(commit_message, node)
+    
         if prepare_message not in node.committed_messages:
             node.committed_messages.append(prepare_message)
             node.send_message_to_all(commit_message)
-                
-        # commit_count = sum(1 for msg in node.committed_messages if commit_message["digest"] in msg)
-        
-        # print(f"faulty_nodes_count: {self.faulty_nodes_count()}")
-        # if self.faulty_nodes_count() == 0:
-        #         self.send_reply_to_client(commit_message, node)
-        # else:
-        #     if commit_count >= (2 * self.faulty_nodes_count() + 1):
-        #         self.send_reply_to_client(commit_message, node)
-    
+          
     def send_reply_to_client(self, commit_message: Dict[str, Any], node: 'Node') -> None:
         print(f"Node {node.node_id} sending reply to client")
+        commit_message_digest = hashlib.sha256(str(commit_message).encode()).hexdigest()
+        
         reply_message = {
             "stage": "REPLY",
-            "view": commit_message["view"],
+            # "view": commit_message["view"],
             "timestamp": int(time.time()),
             "client_id": commit_message["client_id"],
-            "digest": commit_message["digest"],
+            "result": "Execution Result",
             "node_id": node.node_id
         }
-        node.send_message_to_client(reply_message)
         
-    def faulty_nodes_count(self) -> int:
-        faulty_nodes = len([node for node in self.nodes if node.node_tag == "fault"])
-        print("ff", faulty_nodes)
-        return faulty_nodes
-    
+        node.client_node.receive_reply(reply_message, self.count_of_faulty_nodes)
+        
     # def handle_view_change(self, message: Dict[str, Any], node: 'Node') -> None:
     #     new_view = message["new_view"]
     #     if new_view > self.current_view:
