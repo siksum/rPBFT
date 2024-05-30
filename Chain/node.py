@@ -36,6 +36,9 @@ class Node:
         self.commit_messages_archive : List[Dict[str, Any]] = []
         self.reply_messages_archive : List[Dict[str, Any]] = []
 
+        self.pre_prepare_seqnum: int = 0
+        self.prepared_seqnum: int = 0
+        self.committed_seqnum: int = 0
 
     def monitor_primary(self) -> None:
         while True:
@@ -66,14 +69,38 @@ class Node:
             self.client_node.receive_reply(message)
         
 
-    def receive_message(self, message: str) -> None:
+    def receive_message(self, message) -> None:
         print(f"Node {self.node_id} received message: ", end="")
         message_dict = eval(message)
         print(f"stage: {message_dict.get('stage')}, from: Node {message_dict.get('node_id')}")
+        
         message_hash = message_dict.get('digest')
-        if message_hash in self.processed_messages:
-            print(f"Node {self.node_id} already processed message: {message}")
-            return None
+        
+        all_archives = [
+            self.pre_prepare_messages_archive,
+            self.prepare_messages_archive,
+            self.commit_messages_archive,
+        ]
+        
+        for archive in all_archives:
+            if any(msg.get('digest') == message_hash for msg in archive):
+                print(f"Node {self.node_id} already processed message: {message}")
+                return None
+            
+        if message_dict.get('stage') == "PRE-PREPARE":
+            self.pre_prepare_messages_archive.append(message_dict)
+        elif message_dict.get('stage') == "PREPARE":
+            self.prepare_messages_archive.append(message_dict)
+        elif message_dict.get('stage') == "COMMIT":
+            self.commit_messages_archive.append(message_dict)
+
+            
+        # else:
+        #     self.request_messages_archive.append(message_dict)
+        
+        # if message_hash in self.processed_messages:
+        #     print(f"Node {self.node_id} already processed message: {message}")
+        #     return None
         
         self.processed_messages.add(message_hash)
         self.consensus_algorithm.handle_message(message_dict, self)

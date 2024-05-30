@@ -63,8 +63,6 @@ class PBFT(ConsensusAlgorithm):
             elif stage == "VIEW-CHANGE":
                 self.handle_view_change(message, node)
 
-
-
     def request_view_change(self, node_id: int, new_view: int) -> None:
         view_change = ViewChange(node_id)
         view_change.change_view()
@@ -87,22 +85,21 @@ class PBFT(ConsensusAlgorithm):
         request_digest = hashlib.sha256(str(request).encode()).hexdigest()
         pre_prepare_message = {
             "stage": "PRE-PREPARE",
-            "view": self.current_view,
-            "seq_num": node.current_view_number,
+            # "view": self.current_view,
+            "seq_num": node.pre_prepare_seqnum,
             "digest": request_digest,
             "data": request,
             "node_id": node.node_id,
             "client_id": request["client_id"]
         }
-        pre_prepare_message_digest = hashlib.sha256(str(pre_prepare_message).encode()).hexdigest()
-        if pre_prepare_message_digest not in node.pre_prepared_messages:
-            node.pre_prepared_messages.append(pre_prepare_message_digest)
+        if pre_prepare_message not in node.pre_prepared_messages:
+            node.pre_prepared_messages.append(pre_prepare_message)
             node.send_message_to_all(pre_prepare_message)
         
             prepare_message= {
                 "stage": "PREPARE",
-                "view": self.current_view,
-                "seq_num": node.current_view_number,
+                # "view": self.current_view,
+                "seq_num": node.prepared_messages,
                 "digest": request_digest,
                 "node_id": node.node_id,
                 "client_id": request["client_id"]
