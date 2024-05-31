@@ -4,6 +4,7 @@ import hashlib
 import time
 from view import ViewChange
 from node import PrimaryNode, ClientNode
+import random
 
 if TYPE_CHECKING:
     from node import Node
@@ -13,9 +14,9 @@ class ConsensusAlgorithm(ABC):
     def handle_message(self, message: Dict[str, Any], node: 'Node') -> None:
         pass
 
-    @abstractmethod
-    def request_view_change(self, node_id: int, new_view: int) -> None:
-        pass
+    # @abstractmethod
+    # def request_view_change(self, node_id: int, new_view: int) -> None:
+    #     pass
 
     @abstractmethod
     def pre_prepare(self, request: Dict[str, Any], node: 'Node') -> None:
@@ -46,8 +47,6 @@ class PBFT(ConsensusAlgorithm):
     def __init__(self):
         self.current_view: int = 0
         self.view_change_requests: List[ViewChange] = []
-        self.timeout_base: float = 5.0
-        self.current_timeout: float = self.timeout_base
         self.client_node: 'ClientNode' = None
         self.count_of_faulty_nodes: int = 0
         self.nodes: List['Node'] = []
@@ -109,41 +108,47 @@ class PBFT(ConsensusAlgorithm):
             # elif stage == "VIEW-CHANGE":
             #     self.handle_view_change(message, node)
 
-    def request_view_change(self, node_id: int, new_view: int) -> None:
-        view_change = ViewChange(node_id)
-        view_change.change_view()
-        view_change_message = {
-            "stage": "VIEW-CHANGE",
-            "new_view": new_view,
-            "node_id": node_id
-        }
-        self.view_change_requests.append(view_change)
-        self.broadcast_view_change(view_change_message)
+    # def request_view_change(self, node_id: int, new_view: int) -> None:
+    #     view_change = ViewChange(node_id)
+    #     view_change.change_view()
+    #     view_change_message = {
+    #         "stage": "VIEW-CHANGE",
+    #         "new_view": new_view,
+    #         "node_id": node_id
+    #     }
+    #     self.view_change_requests.append(view_change)
+    #     self.broadcast_view_change(view_change_message)
 
-        time.sleep(self.current_timeout)
-        if self.check_view_change_agreement(new_view):
-            self.start_new_view(new_view)
-        else:
-            self.current_timeout *= 2
+    #     time.sleep(self.current_timeout)
+    #     if self.check_view_change_agreement(new_view):
+    #         self.start_new_view(new_view)
+    #     else:
+    #         self.current_timeout *= 2
 
     def pre_prepare(self, request: Dict[str, Any], node: 'Node') -> None:
         print(f"Node {node.node_id} pre-prepare stage")
-        
-        request_digest = hashlib.sha256(str(request).encode()).hexdigest()
-        pre_prepare_message = {
-            "stage": "PRE-PREPARE",
-            # "view": self.current_view,
-            "seq_num": node.pre_prepare_seqnum,
-            "digest": request_digest,
-            "data": request,
-            "node_id": node.node_id,
-            "client_id": request["client_id"]
-        }
-        if pre_prepare_message not in node.pre_prepared_messages:
-            node.pre_prepared_messages.append(pre_prepare_message)
-            node.send_message_to_all(pre_prepare_message)
-            
-
+        pre_prepare_message= None
+        if node.node_tag == "fault":
+            if random.choice([True, False]):
+                node.send_message_to_all(pre_prepare_message)
+            else:
+                time.sleep(node.timeout_base + 1)
+                ("randome")
+        else:
+            request_digest = hashlib.sha256(str(request).encode()).hexdigest()
+            pre_prepare_message = {
+                "stage": "PRE-PREPARE",
+                # "view": self.current_view,
+                "seq_num": node.pre_prepare_seqnum,
+                "digest": request_digest,
+                "data": request,
+                "node_id": node.node_id,
+                "client_id": request["client_id"]
+            }
+            if pre_prepare_message not in node.pre_prepared_messages:
+                node.pre_prepared_messages.append(pre_prepare_message)
+                node.send_message_to_all(pre_prepare_message)
+                
 
     def prepare(self, pre_prepare_message: Dict[str, Any], node: 'Node') -> None:
         print(f"Node {node.node_id} prepare stage")

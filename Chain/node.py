@@ -13,6 +13,7 @@ class Node:
         self.client_node: 'ClientNode' = client_node
         self.node_id: int = node_id
         self.node_tag: str = node_tag
+        self.timeout_base: float = 5.0
         self.blockchain: Blockchain = blockchain
         self.host: str = host
         self.port: int = port
@@ -40,13 +41,15 @@ class Node:
         self.prepared_seqnum: int = 0
         self.committed_seqnum: int = 0
 
-    def monitor_primary(self) -> None:
-        while True:
-            if self.is_primary:
-                continue
-            if int(time.time()) - self.last_primary_message_time > self.consensus_algorithm.timeout_base:
-                self.detect_failure_and_request_view_change()
-            time.sleep(1)
+    def monitor_primary(self, message) -> None:
+        if self.is_primary:
+            return
+        
+        if message == str(None) or int(time.time()) - self.last_primary_message_time  > int(self.timeout_base):
+            self.detect_failure_and_request_view_change()
+        else:
+            return None
+        time.sleep(1)
             
     def detect_failure_and_request_view_change(self)-> None:
         print(f"Node {self.node_id} detected failure and is requesting view change.")
@@ -57,25 +60,17 @@ class Node:
         client = Client(host, port)
         self.peers.append(client)
 
-    def send_message_to_all(self, message: str) -> None:
+    def send_message_to_all(self, message) -> None:
         for peer in self.peers:
             peer.send_message(str(message))
     
-        
-
     def receive_message(self, message) -> None:
-        print(f"[Recieve] Node: {self.node_id}, ", end="")
-        message_dict = eval(message)
-        print(f"stage: {message_dict.get('stage')}, from: Node {message_dict.get('node_id')}")
-        
-        # else:
-        #     self.request_messages_archive.append(message_dict)
-        
-        # if message_hash in self.processed_messages:
-        #     print(f"Node {self.node_id} already processed message: {message}")
-        #     return None
-        
-        self.consensus_algorithm.handle_message(message_dict, self)
+        if self.monitor_primary(message) is None:
+            print(f"[Recieve] Node: {self.node_id}, ", end="")
+            message_dict = eval(message)
+            print(f"stage: {message_dict.get('stage')}, from: Node {message_dict.get('node_id')}")
+
+            self.consensus_algorithm.handle_message(message_dict, self)
     
     def validate_message(self, message, message_archive):
         for message_of_stage in message_archive:
@@ -146,6 +141,7 @@ class PrimaryNode:
     def receive_request(self, request):
         print(f"[Recieve] Primary Node: {self.node_id}, content: {request}")
         self.node.pre_prepared_messages.append(request)
+        
         self.pbft.pre_prepare(request, self.node)
 
     @property

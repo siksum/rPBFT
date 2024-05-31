@@ -1,13 +1,18 @@
 import socket
 import threading
 import json
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from node import Node
+    
 
 
 class Server:
     def __init__(self, host, port, node):
         self.host = host
         self.port = port
-        self.node = node
+        self.node: 'Node' = node
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_socket.bind((self.host, self.port))
@@ -35,7 +40,7 @@ class Server:
                     message = json.loads(message_bytes.decode('utf-8'))
                     self.node.receive_message(message)
                 else:
-                    break
+                    self.node.receive_message(message)
             except:
                 break
         client_socket.close()
