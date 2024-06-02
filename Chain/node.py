@@ -90,29 +90,6 @@ class Node:
         action = random.choice(faulty_actions)
         action()
 
-    def send_incorrect_message(self):
-        incorrect_message = {
-            "stage": "PRE-PREPARE",
-            "seq_num": self.pre_prepare_seqnum,
-            "digest": "incorrect_digest",
-            "data": "incorrect_data",
-            "node_id": self.node_id,
-            "client_id": "incorrect_client_id"
-        }
-        self.send_message_to_all(str(incorrect_message))
-
-    def send_duplicate_message(self):
-        if self.pre_prepared_messages:
-            duplicate_message = self.pre_prepared_messages[0]
-            self.send_message_to_all(str(duplicate_message))
-
-    def omit_message(self):
-        print(f"Node {self.node_id} is omitting a message")
-
-    def delay_message(self):
-        time.sleep(self.consensus_algorithm.timeout_base * 2)
-        print(f"Node {self.node_id} is delaying a message")
-
     def stop(self):
         self.server.stop()
         for peer in self.peers:
@@ -128,7 +105,6 @@ class ClientNode:
         self.list_of_nodes: List[Node] = list_of_nodes
         self.received_replies: List[Dict[str, Any]] = []
         self.count_of_replies: int = 0
-        
     
     def send_request(self, pbft_handler:'PBFTHandler', data: str, timestamp: int):
         request= {
@@ -141,7 +117,6 @@ class ClientNode:
         
         print(f"[Send] Client Node: {self.client_node_id} -> Primary Node: {request}")
         pbft_handler.send_request_to_primary(self.request_messages)
-        
 
     def receive_reply(self, reply_message: Dict[str, Any], count_of_faulty_nodes) -> None:
         self.count_of_replies += 1
@@ -177,7 +152,6 @@ class PrimaryNode:
         self.node.received_request_messages['node_id_to'] = self.node_id
         self.node.received_request_messages['node_id_from'] = request['client_id']
         self.node.received_request_messages['message'] = request
-        
         self.pbft.pre_prepare(request, self.node)
 
     @property

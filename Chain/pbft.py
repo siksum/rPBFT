@@ -58,16 +58,19 @@ class PBFT(ConsensusAlgorithm):
             node.received_prepare_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
             if node.is_faulty is True:
                 return
-            if len(node.received_prepare_messages) >= 2 * self.count_of_faulty_nodes and node.validate_message(message, node.received_prepare_messages) is True:
-                self.commit(message, node)
+            self.commit(message, node)
+
+            # if len(node.received_prepare_messages) >= 2 * self.count_of_faulty_nodes and node.validate_message(message, node.received_prepare_messages) is True:
+            #     self.commit(message, node)
                 
         elif message["stage"] == "COMMIT":
             node.received_commit_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
             if node.is_faulty is True:
                 return
-            if len(node.received_commit_messages) >= (2 * self.count_of_faulty_nodes + 1) and node.validate_message(message, node.received_commit_messages) is True:
-                print(f"Node {node.node_id}, {len(node.received_commit_messages)}")
-                self.send_reply_to_client(message, node)
+            self.send_reply_to_client(message, node)
+            # if len(node.received_commit_messages) >= (2 * self.count_of_faulty_nodes + 1) and node.validate_message(message, node.received_commit_messages) is True:
+            #     print(f"Node {node.node_id}, {len(node.received_commit_messages)}")
+            #     self.send_reply_to_client(message, node)
                 
         # elif stage == "VIEW-CHANGE":
         #     self.handle_view_change(message, node)
@@ -108,9 +111,6 @@ class PBFT(ConsensusAlgorithm):
                                                         'message': pre_prepare_message})
         node.send_message_to_all(pre_prepare_message)
             
-        # if node.is_faulty == True: #랜덤하게 해야 하나?
-        #     node.faulty_behavior()
-        
     def prepare(self, pre_prepare_message: Dict[str, Any], node: 'Node') -> None:
         print(f"Node {node.node_id} prepare stage")
         pre_prepare_message_digest = hashlib.sha256(str(pre_prepare_message).encode()).hexdigest()
@@ -139,8 +139,6 @@ class PBFT(ConsensusAlgorithm):
             "digest": prepare_message_digest,
             "node_id": node.node_id,
         }
-        for node in self.nodes:
-            print(node.peers_list)
         if node.processed_commit_messages == {}:
             node.processed_commit_messages.update({'node_id_from': node.node_id, 
                                                 'message': commit_message})
@@ -153,7 +151,7 @@ class PBFT(ConsensusAlgorithm):
             "stage": "REPLY",
             # "view": commit_message["view"],
             "timestamp": int(time.time()),
-            "client_id": commit_message["client_id"],
+            "client_id": node.client_node.client_node_id,
             "result": "Execution Result",
             "node_id": node.node_id
         }

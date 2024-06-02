@@ -1,9 +1,34 @@
-[{'node_id_to': 1, 'node_id_from': 2, 'message': {'stage': 'PREPARE', 'seq_num': 1, 'digest': '0fc8195b1c5459132f71076493eb12b028b6b9aa668594b399c916e82e994edd', 'node_id': 2}}]
-[{'node_id_to': 1, 'node_id_from': 2, 'message': {'stage': 'PREPARE', 'seq_num': 1, 'digest': '0fc8195b1c5459132f71076493eb12b028b6b9aa668594b399c916e82e994edd', 'node_id': 2}}, {'node_id_to': 1, 'node_id_from': 3, 'message': {'stage': 'PREPARE', 'seq_num': 1, 'digest': '0fc8195b1c5459132f71076493eb12b028b6b9aa668594b399c916e82e994edd', 'node_id': 3}}]
+[Recieve] Node: 2, stage: PRE-PREPARE, from: Node 1
+[Recieve] Node: 3, stage: PRE-PREPARE, from: Node 1
+[Recieve] Node: 4, stage: PRE-PREPARE, from: Node 1
 
-[{'node_id_to': 2, 'node_id_from': 3, 'message': {'stage': 'PREPARE', 'seq_num': 1, 'digest': '0fc8195b1c5459132f71076493eb12b028b6b9aa668594b399c916e82e994edd', 'node_id': 3}}]
+[Recieve] Node: 1, stage: PREPARE, from: Node 2
+[Recieve] Node: 1, stage: PREPARE, from: Node 3
+[Recieve] Node: 2, stage: PREPARE, from: Node 3
+[Recieve] Node: 3, stage: PREPARE, from: Node 2
+[Recieve] Node: 4, stage: PREPARE, from: Node 2
+[Recieve] Node: 4, stage: PREPARE, from: Node 3
 
-[{'node_id_to': 3, 'node_id_from': 2, 'message': {'stage': 'PREPARE', 'seq_num': 1, 'digest': '0fc8195b1c5459132f71076493eb12b028b6b9aa668594b399c916e82e994edd', 'node_id': 2}}]
+[Recieve] Node: 1, stage: COMMIT, from: Node 2
+[Recieve] Node: 1, stage: COMMIT, from: Node 3
+[Recieve] Node: 2, stage: COMMIT, from: Node 1
+[Recieve] Node: 2, stage: COMMIT, from: Node 1
+[Recieve] Node: 2, stage: COMMIT, from: Node 3
+[Recieve] Node: 3, stage: COMMIT, from: Node 1
+[Recieve] Node: 3, stage: COMMIT, from: Node 2
+[Recieve] Node: 4, stage: COMMIT, from: Node 1
+[Recieve] Node: 4, stage: COMMIT, from: Node 1
+[Recieve] Node: 4, stage: COMMIT, from: Node 2
+[Recieve] Node: 4, stage: COMMIT, from: Node 3
 
-[{'node_id_to': 4, 'node_id_from': 2, 'message': {'stage': 'PREPARE', 'seq_num': 1, 'digest': '0fc8195b1c5459132f71076493eb12b028b6b9aa668594b399c916e82e994edd', 'node_id': 2}}, {'node_id_to': 4, 'node_id_from': 3, 'message': {'stage': 'PREPARE', 'seq_num': 1, 'digest': '0fc8195b1c5459132f71076493eb12b028b6b9aa668594b399c916e82e994edd', 'node_id': 3}}]
-[{'node_id_to': 4, 'node_id_from': 2, 'message': {'stage': 'PREPARE', 'seq_num': 1, 'digest': '0fc8195b1c5459132f71076493eb12b028b6b9aa668594b399c916e82e994edd', 'node_id': 2}}]
+Node 3 sending reply to client
+Node 2 sending reply to client
+Node 1 sending reply to client
+Node 1 sending reply to client
+[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717331813, 'client_id': 0, 'result': 'Execution Result', 'node_id': 1}
+[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717331813, 'client_id': 0, 'result': 'Execution Result', 'node_id': 1}
+[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717331813, 'client_id': 0, 'result': 'Execution Result', 'node_id': 2}
+[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717331813, 'client_id': 0, 'result': 'Execution Result', 'node_id': 2}
+[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717331813, 'client_id': 0, 'result': 'Execution Result', 'node_id': 3}
+[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717331813, 'client_id': 0, 'result': 'Execution Result', 'node_id': 2}
+[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717331813, 'client_id': 0, 'result': 'Execution Result', 'node_id': 3}
