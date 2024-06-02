@@ -8,9 +8,9 @@ class ConsensusAlgorithm(ABC):
     def handle_message(self, message: Dict[str, Any], node: 'Node') -> None:
         pass
 
-    @abstractmethod
-    def request_view_change(self, node_id: int, new_view: int) -> None:
-        pass
+    # @abstractmethod
+    # def request_view_change(self, node_id: int, new_view: int) -> None:
+    #     pass
 
     @abstractmethod
     def pre_prepare(self, request: Dict[str, Any], node: 'Node') -> None:

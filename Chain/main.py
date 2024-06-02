@@ -32,15 +32,6 @@ class Test:
             view change때는 랜덤으로 primary node를 설정
         """
         for i in range(1, self.count_of_nodes + 1):
-            # if i == 1:
-            #     node:Node = Node(self.client_node, 
-            #                      i, 
-            #                      FAULT, 
-            #                      self.blockchain, 
-            #                      LOCALHOST, 
-            #                      self.port + i, 
-            #                      self.pbft_algorithm)
-            # else:
             node:Node = Node(self.client_node, 
                             i, 
                             RIGHT, 
@@ -94,7 +85,7 @@ class Test:
         
 if __name__ == "__main__":
     try:
-        test = Test(algorithm=PBFT(), count_of_nodes=6, count_of_faulty_nodes=1, port=5300, blocksize=10)
+        test = Test(algorithm=PBFT(), count_of_nodes=3, count_of_faulty_nodes=1, port=5300, blocksize=10)
         test.setup_client_nodes()
         test.setup_nodes()
         test.initialize_network()
