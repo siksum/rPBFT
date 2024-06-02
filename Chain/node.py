@@ -1,24 +1,23 @@
 import time
-from network import Server, Client
 from typing import List, Set, Dict, TYPE_CHECKING, Any
 from blockchain import Blockchain
 from constant import *
 import random
-import threading
+from network import Server
 
 if TYPE_CHECKING:
     from pbft import PBFTHandler, PBFT
+    from network import Server, Client
+    
 
 
 class Node:
-    def __init__(self, client_node: 'ClientNode', node_id: int, node_tag: str, blockchain: Blockchain, host: str, port: int, consensus_algorithm):
+    def __init__(self, client_node: 'ClientNode', node_id: int, is_faulty: bool, blockchain: Blockchain, host: str, port: int, consensus_algorithm):
         self.client_node: 'ClientNode' = client_node
         self.node_id: int = node_id
         
         self.is_primary: bool = False
-        self.is_faulty: bool = False  
-        
-        self.node_tag: str = node_tag
+        self.is_faulty: bool = is_faulty  
         self.timeout_base: float = 5.0
         self.blockchain: Blockchain = blockchain
         self.host: str = host
@@ -27,6 +26,7 @@ class Node:
         self.server = Server(host, port, self)
         self.server.start()
         self.peers: List[Client] = []
+        self.peers_list: List[Dict[str, Any]] = []
         
         self.processed_messages: List[Dict[str, Any]] = []
         self.received_request_messages: Dict[str, Any] = {}
@@ -35,9 +35,9 @@ class Node:
         self.processed_prepare_messages: Dict[str, Any] = {}
         self.processed_commit_messages: Dict[str, Any] = {}
         
-        self.received_pre_prepare_messages: Dict[str, Any] = {}
-        self.received_prepare_messages: Dict[str, Any] = {}
-        self.received_commit_messages: Dict[str, Any] = {}
+        self.received_pre_prepare_messages: List[Dict[str, Any]] = []
+        self.received_prepare_messages: List[Dict[str, Any]] = []
+        self.received_commit_messages: List[Dict[str, Any]] = []
         
         self.last_primary_message_time: int = int(time.time())
         self.current_view_number: int = 0 
@@ -51,39 +51,34 @@ class Node:
     def monitor_primary(self, message) -> None:
         if self.is_primary:
             return
-        if message == str(None) or int(time.time()) - self.last_primary_message_time  > int(self.timeout_base):
-            self.detect_failure_and_request_view_change()
-        else:
-            return None
-        time.sleep(1)
+        # if message == str(None) or int(time.time()) - self.last_primary_message_time  > int(self.timeout_base):
+        #     self.detect_failure_and_request_view_change()
+        # else:
+        #     return None
+        # time.sleep(1)
             
     def detect_failure_and_request_view_change(self)-> None:
         print(f"Node {self.node_id} detected failure and is requesting view change.")
         new_view = self.current_view_number + 1
         self.consensus_algorithm.request_view_change(self.node_id, new_view)
 
-    def connect_to_peer(self, host: str, port: int) -> None:
-        client = Client(host, port)
-        self.peers.append(client)
-
     def send_message_to_all(self, message) -> None:
-        for peer in self.peers:
-            peer.send_message(str(message))
+        for peer in self.peers_list:
+            peer["client"].send_message(str(message))
             
     def receive_message(self, message) -> None:
-        if self.monitor_primary(message) is None:
-            print(f"[Recieve] Node: {self.node_id}, ", end="")
-            message_dict = eval(message)
-            print(f"stage: {message_dict.get('stage')}, from: Node {message_dict.get('node_id')}")
-            # threading.Thread(target=self.consensus_algorithm.handle_message, args=(message_dict, self)).start()
-            self.consensus_algorithm.handle_message(message_dict, self)
+        # if self.monitor_primary(message) is None:
+        print(f"[Recieve] Node: {self.node_id}, ", end="")
+        message_dict = eval(message)
+        print(f"stage: {message_dict.get('stage')}, from: Node {message_dict.get('node_id')}")
+        # threading.Thread(target=self.consensus_algorithm.handle_message, args=(message_dict, self)).start()
+        self.consensus_algorithm.handle_message(message_dict, self)
     
-    def validate_message(self, message, message_archive):
-        for message_of_stage in message_archive:
-            if (message_of_stage['seq_num'] == message['seq_num'] and
-                    message_of_stage['digest'] == message['digest']):
+    def validate_message(self, request, received_prepare_messages):
+        for received_prepare_message in received_prepare_messages:
+            if (received_prepare_message['message']['seq_num'] == request['seq_num'] and
+                    received_prepare_message['message']['digest'] == request['digest']):
                 return True
-        return False
     
     def faulty_behavior(self):
         faulty_actions = [
@@ -175,7 +170,6 @@ class PrimaryNode:
     def __init__(self, node: Node, pbft: 'PBFT'):
         self.node = node
         self.node_id: int = node.node_id
-        self.node_tag: str = node.node_tag
         self.pbft: 'PBFT' = pbft
 
     def receive_request(self, request):

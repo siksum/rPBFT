@@ -5,10 +5,16 @@ from view import ViewChange
 from node import PrimaryNode, ClientNode
 import random
 from abstract import ConsensusAlgorithm
+from network import Client
 
 if TYPE_CHECKING:
     from node import Node
 
+
+def receive_pre_prepare_message(hash_data, message) -> bool:
+    if hash_data == hashlib.sha256(str(message).encode()).hexdigest():
+        return True
+    return False
 
 def receive_prepare_message(count: int, faulty_nodes) -> bool:
     if count >= (2 * faulty_nodes):
@@ -42,47 +48,27 @@ class PBFT(ConsensusAlgorithm):
         if node.is_primary:
             node.last_primary_message_time = int(time.time())
 
-        stage = message["stage"]
-        if stage == "PRE-PREPARE":  #prepare stage 시작 직전
-            node.received_pre_prepare_messages['node_id_to']= node.node_id
-            node.received_pre_prepare_messages['node_id_from'] = message['node_id']
-            node.received_pre_prepare_messages['message'] = message
-            if node.is_faulty == True:
+        if message["stage"] == "PRE-PREPARE":  #prepare stage 시작 직전
+            node.received_pre_prepare_messages.append({'node_id_to' : node.node_id, 'node_id_from': message['node_id'], 'message': message})
+            if node.is_faulty is True:
                 return
             self.prepare(message, node)
+            
+        elif message["stage"] == "PREPARE":
+            node.received_prepare_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
+            if node.is_faulty is True:
+                return
+            if len(node.received_prepare_messages) >= 2 * self.count_of_faulty_nodes and node.validate_message(message, node.received_prepare_messages) is True:
+                self.commit(message, node)
                 
-        elif stage == "PREPARE":
-            node.prepare_messages_archive.append(message)
-            self.pre_prepare_archive.append(message)
-
-            if node.node_tag == "fault":
+        elif message["stage"] == "COMMIT":
+            node.received_commit_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
+            if node.is_faulty is True:
                 return
-            
-            if node.validate_message(message, self.pre_prepare_archive) is True:
-                self.count_of_prepared += 1
-                print(node.node_id, self.count_of_prepared)
-                correct_prepare = receive_prepare_message(self.count_of_prepared, self.count_of_faulty_nodes)
-                if correct_prepare is True:
-                    self.commit(message, node)
-            else:
-                print(f"Node {node.node_id} failed to validate prepare message.")
-                return
+            if len(node.received_commit_messages) >= (2 * self.count_of_faulty_nodes + 1) and node.validate_message(message, node.received_commit_messages) is True:
+                print(f"Node {node.node_id}, {len(node.received_commit_messages)}")
+                self.send_reply_to_client(message, node)
                 
-        elif stage == "COMMIT":
-            node.commit_messages_archive.append(message)
-            self.prepare_archive.append(message)
-            
-            if node.node_tag == "fault":
-                return
-            
-            if node.validate_message(message, self.prepare_archive) is True:
-                self.count_of_committed += 1
-                correct_commit = receive_commit_message(self.count_of_committed, self.count_of_faulty_nodes)
-                if correct_commit is True:
-                    self.send_reply_to_client(message, node)
-            else:
-                print(f"Node {node.node_id} failed to validate commit message.")
-                return
         # elif stage == "VIEW-CHANGE":
         #     self.handle_view_change(message, node)
 
@@ -114,35 +100,34 @@ class PBFT(ConsensusAlgorithm):
             "seq_num": self.sequence_number,
             "digest": request_digest,
             "data": request,
-            "node_id": node.node_id,
-            "client_id": request["client_id"]
+            "node_id": node.node_id
         }
         
         if node.processed_pre_prepare_messages == {} :
             node.processed_pre_prepare_messages.update({'node_id_from': node.node_id, 
                                                         'message': pre_prepare_message})
-            node.send_message_to_all(pre_prepare_message)
+        node.send_message_to_all(pre_prepare_message)
             
-            if node.is_faulty == True:
-                node.faulty_behavior()
+        # if node.is_faulty == True: #랜덤하게 해야 하나?
+        #     node.faulty_behavior()
         
-
     def prepare(self, pre_prepare_message: Dict[str, Any], node: 'Node') -> None:
         print(f"Node {node.node_id} prepare stage")
         pre_prepare_message_digest = hashlib.sha256(str(pre_prepare_message).encode()).hexdigest()
+        
         prepare_message= {
             "stage": "PREPARE",
             # "view": self.current_view,
             "seq_num": pre_prepare_message["seq_num"],
             "digest": pre_prepare_message_digest,
             "node_id": node.node_id,
-            "client_id": pre_prepare_message["client_id"]
         }
-        if prepare_message not in node.prepared_messages:
-            node.prepared_messages.append(prepare_message)
-            node.send_message_to_all(prepare_message)
+        
+        if node.processed_prepare_messages == {}:
+            node.processed_prepare_messages.update({'node_id_from': node.node_id, 
+                                                    'message': prepare_message})
+        node.send_message_to_all(prepare_message)
             
-
     def commit(self, prepare_message: Dict[str, Any], node: 'Node') -> None:
         print(f"Node {node.node_id} commit stage")
         prepare_message_digest = hashlib.sha256(str(prepare_message).encode()).hexdigest()
@@ -153,12 +138,13 @@ class PBFT(ConsensusAlgorithm):
             "seq_num": prepare_message["seq_num"],
             "digest": prepare_message_digest,
             "node_id": node.node_id,
-            "client_id": prepare_message["client_id"]
         }
-    
-        if prepare_message not in node.committed_messages:
-            node.committed_messages.append(prepare_message)
-            node.send_message_to_all(commit_message)
+        for node in self.nodes:
+            print(node.peers_list)
+        if node.processed_commit_messages == {}:
+            node.processed_commit_messages.update({'node_id_from': node.node_id, 
+                                                'message': commit_message})
+        node.send_message_to_all(commit_message)
           
     def send_reply_to_client(self, commit_message: Dict[str, Any], node: 'Node') -> None:
         print(f"Node {node.node_id} sending reply to client")
@@ -213,8 +199,8 @@ class PBFTHandler:
         self.consensus = consensus
         
         self.nodes: List['Node'] = nodes
-        self.right_nodes = [node for node in nodes if node.node_tag == "right"]
-        self.faulty_nodes = [node for node in nodes if node.node_tag == "fault"]
+        self.right_nodes = [node for node in nodes if node.is_faulty is False]
+        self.faulty_nodes = [node for node in nodes if node.is_faulty is True]
         
         self.check_count_of_nodes()
     
@@ -240,7 +226,7 @@ class PBFTHandler:
         for node in self.nodes:
             for peer in self.nodes:
                 if node.node_id != peer.node_id:
-                    node.connect_to_peer(peer.host, peer.port)
+                    node.peers_list.append({"node_id": peer.node_id, "client": Client(peer.host, peer.port)})
 
     def select_random_primary(self) -> None:
         original_primary = self.primary_node.node

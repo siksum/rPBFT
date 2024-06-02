@@ -34,7 +34,7 @@ class Test:
         for i in range(1, self.count_of_nodes + 1):
             node:Node = Node(self.client_node, 
                             i, 
-                            RIGHT, 
+                            False, 
                             self.blockchain, 
                             LOCALHOST, 
                             self.port + i, 
@@ -47,7 +47,7 @@ class Test:
         for i in range(1, self.count_of_faulty_nodes + 1):
             faulty_nodes = Node(self.client_node, 
                 i+self.count_of_nodes, 
-                FAULT, 
+                True, 
                 self.blockchain, 
                 LOCALHOST, 
                 self.port + self.count_of_nodes + i, 
@@ -82,6 +82,8 @@ class Test:
             self.list_of_nodes[0].detect_failure_and_request_view_change()
         # self.pbft_algorithm.request_view_change(1)
         # assert self.pbft_algorithm.current_view == 1, "View Change Failed"
+        
+
         
 if __name__ == "__main__":
     try:

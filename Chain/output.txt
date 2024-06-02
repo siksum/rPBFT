@@ -1,0 +1,9 @@
+[{'node_id_to': 1, 'node_id_from': 2, 'message': {'stage': 'PREPARE', 'seq_num': 1, 'digest': '0fc8195b1c5459132f71076493eb12b028b6b9aa668594b399c916e82e994edd', 'node_id': 2}}]
+[{'node_id_to': 1, 'node_id_from': 2, 'message': {'stage': 'PREPARE', 'seq_num': 1, 'digest': '0fc8195b1c5459132f71076493eb12b028b6b9aa668594b399c916e82e994edd', 'node_id': 2}}, {'node_id_to': 1, 'node_id_from': 3, 'message': {'stage': 'PREPARE', 'seq_num': 1, 'digest': '0fc8195b1c5459132f71076493eb12b028b6b9aa668594b399c916e82e994edd', 'node_id': 3}}]
+
+[{'node_id_to': 2, 'node_id_from': 3, 'message': {'stage': 'PREPARE', 'seq_num': 1, 'digest': '0fc8195b1c5459132f71076493eb12b028b6b9aa668594b399c916e82e994edd', 'node_id': 3}}]
+
+[{'node_id_to': 3, 'node_id_from': 2, 'message': {'stage': 'PREPARE', 'seq_num': 1, 'digest': '0fc8195b1c5459132f71076493eb12b028b6b9aa668594b399c916e82e994edd', 'node_id': 2}}]
+
+[{'node_id_to': 4, 'node_id_from': 2, 'message': {'stage': 'PREPARE', 'seq_num': 1, 'digest': '0fc8195b1c5459132f71076493eb12b028b6b9aa668594b399c916e82e994edd', 'node_id': 2}}, {'node_id_to': 4, 'node_id_from': 3, 'message': {'stage': 'PREPARE', 'seq_num': 1, 'digest': '0fc8195b1c5459132f71076493eb12b028b6b9aa668594b399c916e82e994edd', 'node_id': 3}}]
+[{'node_id_to': 4, 'node_id_from': 2, 'message': {'stage': 'PREPARE', 'seq_num': 1, 'digest': '0fc8195b1c5459132f71076493eb12b028b6b9aa668594b399c916e82e994edd', 'node_id': 2}}]
