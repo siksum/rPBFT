@@ -67,9 +67,9 @@ class Client:
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect((self.host, self.port))
 
-    def send_message(self, message: str) -> None:
-        meessage_bytes= json.dumps(message).encode('utf-8')
-        self.client_socket.sendall(meessage_bytes)
+    def send_message(self, message) -> None:
+        message_bytes= json.dumps(message).encode('utf-8')
+        self.client_socket.sendall(message_bytes)
 
     def close(self) -> None:
         self.client_socket.close()

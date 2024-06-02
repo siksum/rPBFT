@@ -86,7 +86,6 @@ class Test:
         is_valid: bool = self.blockchain.is_valid_block(self.blockchain.get_latest_block())
         print(f"Blockchain valid: {is_valid}")
 
-   
     def test_view_change(self) -> None:
         if self.list_of_nodes:
             self.list_of_nodes[0].detect_failure_and_request_view_change()

@@ -3,6 +3,7 @@ from network import Server, Client
 from typing import List, Set, Dict, TYPE_CHECKING, Any
 from blockchain import Blockchain
 from constant import *
+import random
 
 if TYPE_CHECKING:
     from pbft import PBFTHandler, PBFT
@@ -79,6 +80,40 @@ class Node:
                 return True
         return False
     
+    def faulty_behavior(self):
+        faulty_actions = [
+            self.send_incorrect_message,
+            self.send_duplicate_message,
+            self.omit_message,
+            self.delay_message
+        ]
+        action = random.choice(faulty_actions)
+        action()
+
+    def send_incorrect_message(self):
+        incorrect_message = {
+            "stage": "PRE-PREPARE",
+            "seq_num": self.pre_prepare_seqnum,
+            "digest": "incorrect_digest",
+            "data": "incorrect_data",
+            "node_id": self.node_id,
+            "client_id": "incorrect_client_id"
+        }
+        self.send_message_to_all(str(incorrect_message))
+
+    def send_duplicate_message(self):
+        if self.pre_prepared_messages:
+            duplicate_message = self.pre_prepared_messages[0]
+            self.send_message_to_all(str(duplicate_message))
+
+    def omit_message(self):
+        print(f"Node {self.node_id} is omitting a message")
+
+    def delay_message(self):
+        time.sleep(self.consensus_algorithm.timeout_base * 2)
+        print(f"Node {self.node_id} is delaying a message")
+
+    
     def stop(self):
         self.server.stop()
         for peer in self.peers:
@@ -135,7 +170,7 @@ class PrimaryNode:
     def __init__(self, node: Node, pbft: 'PBFT'):
         self.node = node
         self.node_id: int = node.node_id
-        self.node_tag: str = PRIMARY
+        self.node_tag: str = node.node_tag
         self.pbft: 'PBFT' = pbft
 
     def receive_request(self, request):

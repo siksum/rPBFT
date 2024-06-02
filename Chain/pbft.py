@@ -1,38 +1,15 @@
-from abc import ABC, abstractmethod
 from typing import List, Dict, Any, TYPE_CHECKING
 import hashlib
 import time
 from view import ViewChange
 from node import PrimaryNode, ClientNode
 import random
+from abstract import ConsensusAlgorithm
 
 if TYPE_CHECKING:
     from node import Node
 
-class ConsensusAlgorithm(ABC):
-    @abstractmethod
-    def handle_message(self, message: Dict[str, Any], node: 'Node') -> None:
-        pass
 
-    # @abstractmethod
-    # def request_view_change(self, node_id: int, new_view: int) -> None:
-    #     pass
-
-    @abstractmethod
-    def pre_prepare(self, request: Dict[str, Any], node: 'Node') -> None:
-        pass
-
-    @abstractmethod
-    def prepare(self, pre_prepare_message: Dict[str, Any], node: 'Node') -> None:
-        pass
-
-    @abstractmethod
-    def commit(self, prepare_message: Dict[str, Any], node: 'Node') -> None:
-        pass
-
-    # @abstractmethod
-    # def handle_view_change(self, message: Dict[str, Any], node: 'Node') -> None:
-    #     pass
 def receive_prepare_message(count: int, faulty_nodes) -> bool:
     if count >= (2 * faulty_nodes):
         return True
@@ -127,28 +104,27 @@ class PBFT(ConsensusAlgorithm):
 
     def pre_prepare(self, request: Dict[str, Any], node: 'Node') -> None:
         print(f"Node {node.node_id} pre-prepare stage")
-        pre_prepare_message= None
-        if node.node_tag == "fault":
-            if random.choice([True, False]):
-                node.send_message_to_all(pre_prepare_message)
-            else:
-                time.sleep(node.timeout_base + 1)
-                ("randome")
-        else:
-            request_digest = hashlib.sha256(str(request).encode()).hexdigest()
-            pre_prepare_message = {
-                "stage": "PRE-PREPARE",
-                # "view": self.current_view,
-                "seq_num": node.pre_prepare_seqnum,
-                "digest": request_digest,
-                "data": request,
-                "node_id": node.node_id,
-                "client_id": request["client_id"]
-            }
-            if pre_prepare_message not in node.pre_prepared_messages:
-                node.pre_prepared_messages.append(pre_prepare_message)
-                node.send_message_to_all(pre_prepare_message)
-                
+        
+        node.pre_prepare_seqnum += 1
+        request_digest = hashlib.sha256(str(request).encode()).hexdigest()
+        pre_prepare_message = {
+            "stage": "PRE-PREPARE",
+            # "view": self.current_view,
+            "seq_num": node.pre_prepare_seqnum,
+            "digest": request_digest,
+            "data": request,
+            "node_id": node.node_id,
+            "client_id": request["client_id"]
+        }
+        if pre_prepare_message not in node.pre_prepared_messages:
+            node.pre_prepared_messages.append(pre_prepare_message)
+            
+            node.send_message_to_all(pre_prepare_message)
+            
+            if node.node_tag == "fault":
+                node.faulty_behavior()
+            
+
 
     def prepare(self, pre_prepare_message: Dict[str, Any], node: 'Node') -> None:
         print(f"Node {node.node_id} prepare stage")
