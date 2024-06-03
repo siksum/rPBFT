@@ -44,17 +44,15 @@ class PBFT(ConsensusAlgorithm):
             node.received_prepare_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
             if node.is_faulty is True:
                 return
-            self.commit(message, node)
-            # if len(node.received_prepare_messages) >= 2 * self.count_of_faulty_nodes and node.validate_message(message, node.received_prepare_messages) is True:
-            #     self.commit(message, node)
+            if len(node.received_prepare_messages) >= 2 * self.count_of_faulty_nodes and node.validate_message(message, node.received_prepare_messages) is True:
+                self.commit(message, node)
                 
         elif message["stage"] == "COMMIT":
             node.received_commit_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
             if node.is_faulty is True:
                 return
-            self.send_reply_to_client(message, node)
-            # if len(node.received_commit_messages) >= (2 * self.count_of_faulty_nodes + 1) and node.validate_message(message, node.received_commit_messages) is True:
-            #     self.send_reply_to_client(message, node)
+            if len(node.received_commit_messages) >= (2 * self.count_of_faulty_nodes + 1) and node.validate_message(message, node.received_commit_messages) is True:
+                self.send_reply_to_client(message, node)
                 
         # elif stage == "VIEW-CHANGE":
         #     self.handle_view_change(message, node)
