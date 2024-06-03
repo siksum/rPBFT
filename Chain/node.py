@@ -1,5 +1,5 @@
 import time
-from typing import List, Set, Dict, TYPE_CHECKING, Any
+from typing import List, Dict, TYPE_CHECKING, Any
 from blockchain import Blockchain
 from constant import *
 import random
@@ -34,6 +34,7 @@ class Node:
         self.processed_pre_prepare_messages: Dict[str, Any] = {}
         self.processed_prepare_messages: Dict[str, Any] = {}
         self.processed_commit_messages: Dict[str, Any] = {}
+        self.processed_reply_messages: Dict[str, Any] = {}
         
         self.received_pre_prepare_messages: List[Dict[str, Any]] = []
         self.received_prepare_messages: List[Dict[str, Any]] = []

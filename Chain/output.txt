@@ -11,24 +11,14 @@
 
 [Recieve] Node: 1, stage: COMMIT, from: Node 2
 [Recieve] Node: 1, stage: COMMIT, from: Node 3
-[Recieve] Node: 2, stage: COMMIT, from: Node 1
-[Recieve] Node: 2, stage: COMMIT, from: Node 1
 [Recieve] Node: 2, stage: COMMIT, from: Node 3
-[Recieve] Node: 3, stage: COMMIT, from: Node 1
+[Recieve] Node: 2, stage: COMMIT, from: Node 1
 [Recieve] Node: 3, stage: COMMIT, from: Node 2
+[Recieve] Node: 3, stage: COMMIT, from: Node 1
 [Recieve] Node: 4, stage: COMMIT, from: Node 1
-[Recieve] Node: 4, stage: COMMIT, from: Node 1
-[Recieve] Node: 4, stage: COMMIT, from: Node 2
 [Recieve] Node: 4, stage: COMMIT, from: Node 3
+[Recieve] Node: 4, stage: COMMIT, from: Node 2
 
-Node 3 sending reply to client
-Node 2 sending reply to client
-Node 1 sending reply to client
-Node 1 sending reply to client
-[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717331813, 'client_id': 0, 'result': 'Execution Result', 'node_id': 1}
-[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717331813, 'client_id': 0, 'result': 'Execution Result', 'node_id': 1}
-[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717331813, 'client_id': 0, 'result': 'Execution Result', 'node_id': 2}
-[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717331813, 'client_id': 0, 'result': 'Execution Result', 'node_id': 2}
-[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717331813, 'client_id': 0, 'result': 'Execution Result', 'node_id': 3}
-[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717331813, 'client_id': 0, 'result': 'Execution Result', 'node_id': 2}
-[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717331813, 'client_id': 0, 'result': 'Execution Result', 'node_id': 3}
+[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717379087, 'client_id': 0, 'result': 'Execution Result', 'node_id': 1}
+[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717379087, 'client_id': 0, 'result': 'Execution Result', 'node_id': 2}
+[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717379087, 'client_id': 0, 'result': 'Execution Result', 'node_id': 3}

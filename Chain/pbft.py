@@ -3,7 +3,6 @@ import hashlib
 import time
 from view import ViewChange
 from node import PrimaryNode, ClientNode
-import random
 from abstract import ConsensusAlgorithm
 from network import Client
 
@@ -45,8 +44,8 @@ class PBFT(ConsensusAlgorithm):
         self.nodes = nodes
 
     def handle_message(self, message: Dict[str, Any], node: 'Node') -> None:
-        if node.is_primary:
-            node.last_primary_message_time = int(time.time())
+        # if node.is_primary:
+        #     node.last_primary_message_time = int(time.time())
 
         if message["stage"] == "PRE-PREPARE":  #prepare stage 시작 직전
             node.received_pre_prepare_messages.append({'node_id_to' : node.node_id, 'node_id_from': message['node_id'], 'message': message})
@@ -109,6 +108,8 @@ class PBFT(ConsensusAlgorithm):
         if node.processed_pre_prepare_messages == {} :
             node.processed_pre_prepare_messages.update({'node_id_from': node.node_id, 
                                                         'message': pre_prepare_message})
+        else:
+            return
         node.send_message_to_all(pre_prepare_message)
             
     def prepare(self, pre_prepare_message: Dict[str, Any], node: 'Node') -> None:
@@ -126,6 +127,8 @@ class PBFT(ConsensusAlgorithm):
         if node.processed_prepare_messages == {}:
             node.processed_prepare_messages.update({'node_id_from': node.node_id, 
                                                     'message': prepare_message})
+        else:
+            return
         node.send_message_to_all(prepare_message)
             
     def commit(self, prepare_message: Dict[str, Any], node: 'Node') -> None:
@@ -142,6 +145,8 @@ class PBFT(ConsensusAlgorithm):
         if node.processed_commit_messages == {}:
             node.processed_commit_messages.update({'node_id_from': node.node_id, 
                                                 'message': commit_message})
+        else:
+            return
         node.send_message_to_all(commit_message)
           
     def send_reply_to_client(self, commit_message: Dict[str, Any], node: 'Node') -> None:
@@ -155,7 +160,11 @@ class PBFT(ConsensusAlgorithm):
             "result": "Execution Result",
             "node_id": node.node_id
         }
-        
+        if node.processed_reply_messages == {}:
+            node.processed_reply_messages.update({'node_id_from': node.node_id, 
+                                                'message': reply_message})
+        else:
+            return
         node.client_node.receive_reply(reply_message, self.count_of_faulty_nodes)
         
     # def handle_view_change(self, message: Dict[str, Any], node: 'Node') -> None:
