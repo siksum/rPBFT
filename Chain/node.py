@@ -47,7 +47,11 @@ class Node:
         print(f"[Recieve] Node: {self.node_id}, ", end="")
         message_dict = eval(message)
         if message_dict.get('stage') == "REQUEST":
-            print(f"stage: {message_dict.get('stage')}, from: Client {message_dict.get('client_id')}")
+            if self.received_request_messages == {}:
+                self.received_request_messages = message_dict
+                print(f"stage: {message_dict.get('stage')}, from: Client {message_dict.get('client_id')}")
+            else:
+                return
         else:
             print(f"stage: {message_dict.get('stage')}, from: Node {message_dict.get('node_id')}")
         self.consensus_algorithm.handle_message(message_dict, self)
@@ -92,7 +96,7 @@ class ClientNode:
                 pbft_handler.send_request_to_primary(self.request_messages)
             else:
                 node.send_message_to_all(self.request_messages)
-        self.primary_node.call_pre_prepare(self.request_messages)
+            self.primary_node.call_pre_prepare(self.request_messages)
             
 
     def receive_reply(self, reply_message: Dict[str, Any], count_of_faulty_nodes) -> None:
