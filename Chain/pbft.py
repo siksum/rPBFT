@@ -48,6 +48,7 @@ class PBFT(ConsensusAlgorithm):
                 self.commit(message, node)
                 
         elif message["stage"] == "COMMIT":
+            node.is_timer_on = False            
             node.received_commit_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
             if node.is_faulty is True:
                 return

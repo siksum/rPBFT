@@ -7,7 +7,9 @@ from network import Server
 if TYPE_CHECKING:
     from pbft import PBFTHandler, PBFT
     from network import Server, Client
-    
+
+VIEW_CHANGE_TIME = 2
+
 class Node:
     def __init__(self, client_node: 'ClientNode', node_id: int, is_faulty: bool, blockchain: Blockchain, host: str, port: int, consensus_algorithm):
         self.client_node: 'ClientNode' = client_node
@@ -33,6 +35,11 @@ class Node:
         self.received_pre_prepare_messages: List[Dict[str, Any]] = []
         self.received_prepare_messages: List[Dict[str, Any]] = []
         self.received_commit_messages: List[Dict[str, Any]] = []
+        
+        self.is_timer_on: bool = False
+        self.timer_start: time = int(time.time())
+        
+        
             
     def detect_failure_and_request_view_change(self)-> None:
         print(f"Node {self.node_id} detected failure and is requesting view change.")
@@ -45,8 +52,14 @@ class Node:
             
     def receive_message(self, message) -> None:
         print(f"[Recieve] Node: {self.node_id}, ", end="")
+        if self.timer_start == True and (int(time.time()) - self.timer_start >= VIEW_CHANGE_TIME):
+            #TODO: View Change Protocol Starts     
+            print("[VIEW_CHANGE] View Change Starts!!!")
+        
         message_dict = eval(message)
         if message_dict.get('stage') == "REQUEST":
+            self.is_timer_on = True
+            self.timer_start = int(time.time())
             if self.received_request_messages == {}:
                 self.received_request_messages = message_dict
                 print(f"stage: {message_dict.get('stage')}, from: Client {message_dict.get('client_id')}")
@@ -102,7 +115,8 @@ class ClientNode:
     def receive_reply(self, reply_message: Dict[str, Any], count_of_faulty_nodes) -> None:
         is_timeout = self.blockchain.consensus.check_timeout(self.blockchain.consensus.count_of_timeout, self.blockchain.consensus.timeout_base)
         if is_timeout is False:
-            return
+            return       
+        
         else:
             self.count_of_replies += 1
             self.received_replies.append(reply_message)
