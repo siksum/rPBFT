@@ -201,6 +201,7 @@ class PBFTHandler:
 
     def send_request_to_primary(self, request: Dict[str, Any]) -> None:
         self.primary_node.receive_request(request)
+        self.client_node.primary_node = self.primary_node
 
     def initialize_network(self) -> None:
         for node in self.nodes:

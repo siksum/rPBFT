@@ -21,7 +21,7 @@ class Test:
         """_summary_
             클라이언트 노드를 설정 -> 0번 노드가 클라이언트 노드
         """
-        client_node = ClientNode(0, self.blockchain, port=self.port)
+        client_node = ClientNode(0, self.blockchain, nodes=self.list_of_nodes, port=self.port)
         self.client_node = client_node
 
     def setup_nodes(self)-> None:

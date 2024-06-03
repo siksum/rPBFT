@@ -13,7 +13,7 @@ def parse_log(log_lines):
             if match:
                 nodes.add(match.group(1))
         
-        if 'Client Node: (\d+) -> Primary Node:' in line:
+        if "[Recieve] Primary Node:" and "content: {'stage': 'REQUEST'," in line:
             messages.append(('C', re.search(r'Primary Node: (\d+)', line).group(1), 'request'))
         elif 'PRE-PREPARE' in line:
             messages.append((re.search(r'from: Node (\d+)', line).group(1), re.search(r'Node: (\d+)', line).group(1), 'pre-prepare'))
@@ -54,7 +54,7 @@ def visualize_pbft(nodes, messages):
         arrow = arrow_style[step]
         
         if step == 'request':
-            ax.annotate('', xy=(0, receiver_idx), xytext=(0, sender_idx),
+            ax.annotate('', xy=(1, receiver_idx), xytext=(0, sender_idx),
                         arrowprops=dict(arrowstyle=arrow['style'], color=arrow['color'], shrinkA=5, shrinkB=5))
         elif step == 'reply':
             ax.annotate('', xy=(len(stages), receiver_idx), xytext=(stage_idx, sender_idx),

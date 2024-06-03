@@ -46,7 +46,10 @@ class Node:
     def receive_message(self, message) -> None:
         print(f"[Recieve] Node: {self.node_id}, ", end="")
         message_dict = eval(message)
-        print(f"stage: {message_dict.get('stage')}, from: Node {message_dict.get('node_id')}")
+        if message_dict.get('stage') == "REQUEST":
+            print(f"stage: {message_dict.get('stage')}, from: Client {message_dict.get('client_id')}")
+        else:
+            print(f"stage: {message_dict.get('stage')}, from: Node {message_dict.get('node_id')}")
         self.consensus_algorithm.handle_message(message_dict, self)
     
     def validate_message(self, request, received_prepare_messages):
@@ -62,14 +65,16 @@ class Node:
             
 
 class ClientNode:
-    def __init__(self, client_id: int, blockchain:'Blockchain', port: int) -> None:
+    def __init__(self, client_id: int, blockchain:'Blockchain', nodes: 'Node', port: int) -> None:
         self.client_node_id: int = client_id
         self.blockchain: 'Blockchain' = blockchain
         self.port: int = port
         self.request_messages: Dict[str, Any] = {}
         self.received_replies: List[Dict[str, Any]] = []
         self.count_of_replies: int = 0
-    
+        self.nodes: List['Node'] = nodes
+        self.primary_node: 'PrimaryNode' = None
+        
     def send_request(self, pbft_handler:'PBFTHandler', data: str, timestamp: int):
         pbft_handler.consensus.count_of_timeout = int(time.time())
         request= {
@@ -80,8 +85,15 @@ class ClientNode:
         }
         self.request_messages = request
         
-        print(f"[Send] Client Node: {self.client_node_id} -> Primary Node: {request}")
-        pbft_handler.send_request_to_primary(self.request_messages)
+        print(f"[Send] Client Node: {self.client_node_id} -> Primary Node: {self.request_messages}")
+        
+        for node in self.nodes:
+            if node.node_id == 1:
+                pbft_handler.send_request_to_primary(self.request_messages)
+            else:
+                node.send_message_to_all(self.request_messages)
+        self.primary_node.call_pre_prepare(self.request_messages)
+            
 
     def receive_reply(self, reply_message: Dict[str, Any], count_of_faulty_nodes) -> None:
         is_timeout = self.blockchain.consensus.check_timeout(self.blockchain.consensus.count_of_timeout, self.blockchain.consensus.timeout_base)
@@ -121,6 +133,8 @@ class PrimaryNode:
         self.node.received_request_messages['node_id_to'] = self.node_id
         self.node.received_request_messages['node_id_from'] = request['client_id']
         self.node.received_request_messages['message'] = request
+        
+    def call_pre_prepare(self, request):
         self.pbft.pre_prepare(request, self.node)
 
     @property
