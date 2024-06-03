@@ -8,22 +8,7 @@ from network import Client
 
 if TYPE_CHECKING:
     from node import Node
-
-
-def receive_pre_prepare_message(hash_data, message) -> bool:
-    if hash_data == hashlib.sha256(str(message).encode()).hexdigest():
-        return True
-    return False
-
-def receive_prepare_message(count: int, faulty_nodes) -> bool:
-    if count >= (2 * faulty_nodes):
-        return True
-    return False
-
-def receive_commit_message(count: int, faulty_nodes) -> bool:
-    if count >= (2 * faulty_nodes + 1):
-        return True
-    return False
+    
 
 class PBFT(ConsensusAlgorithm):
     def __init__(self):
@@ -33,21 +18,30 @@ class PBFT(ConsensusAlgorithm):
         self.count_of_faulty_nodes: int = 0
         self.nodes: List['Node'] = []
         
+        self.timeout_base:float = 3.0
+        self.count_of_timeout:float = 0.0
+        
         self.count_of_prepared = 0
         self.count_of_prepared = 0
         self.count_of_committed = 0
         
         self.sequence_number = 0
         self.sent_replies: set = set() 
-        
+    
+    
     def set_nodes(self, nodes: List['Node']) -> None:
         self.nodes = nodes
 
-    def handle_message(self, message: Dict[str, Any], node: 'Node') -> None:
-        # if node.is_primary:
-        #     node.last_primary_message_time = int(time.time())
+    def check_timeout(self, count_of_timeout, timebase) :
+        time_diff = time.time() - count_of_timeout
+        if time_diff <= timebase:
+            return True
+        else:
+            return False
 
-        if message["stage"] == "PRE-PREPARE":  #prepare stage 시작 직전
+
+    def handle_message(self, message: Dict[str, Any], node: 'Node') -> None:
+        if message["stage"] == "PRE-PREPARE":
             node.received_pre_prepare_messages.append({'node_id_to' : node.node_id, 'node_id_from': message['node_id'], 'message': message})
             if node.is_faulty is True:
                 return
@@ -58,7 +52,6 @@ class PBFT(ConsensusAlgorithm):
             if node.is_faulty is True:
                 return
             self.commit(message, node)
-
             # if len(node.received_prepare_messages) >= 2 * self.count_of_faulty_nodes and node.validate_message(message, node.received_prepare_messages) is True:
             #     self.commit(message, node)
                 
@@ -68,7 +61,6 @@ class PBFT(ConsensusAlgorithm):
                 return
             self.send_reply_to_client(message, node)
             # if len(node.received_commit_messages) >= (2 * self.count_of_faulty_nodes + 1) and node.validate_message(message, node.received_commit_messages) is True:
-            #     print(f"Node {node.node_id}, {len(node.received_commit_messages)}")
             #     self.send_reply_to_client(message, node)
                 
         # elif stage == "VIEW-CHANGE":
@@ -92,6 +84,9 @@ class PBFT(ConsensusAlgorithm):
     #         self.current_timeout *= 2
 
     def pre_prepare(self, request: Dict[str, Any], node: 'Node') -> None:
+        if node.is_faulty is True:
+            return
+        
         self.sequence_number += 1   
         request_digest = hashlib.sha256(str(request).encode()).hexdigest()
         pre_prepare_message = {

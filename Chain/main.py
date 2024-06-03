@@ -7,7 +7,7 @@ from typing import List
 
 class Test:
     def __init__(self, algorithm, count_of_nodes:int, count_of_faulty_nodes:int, port:int, blocksize:int):
-        self.blockchain: Blockchain = Blockchain(blocksize)
+        self.blockchain: Blockchain = Blockchain(algorithm, blocksize)
         self.pbft_algorithm = algorithm
         self.pbft_handler: PBFTHandler = None
         
@@ -62,11 +62,12 @@ class Test:
             node.client_node = self.client_node
         
         self.pbft_algorithm.count_of_faulty_nodes = len(self.pbft_handler.faulty_nodes)
-        
         self.pbft_handler.initialize_network()
     
     def send_request(self) -> None:
+        
         self.client_node.send_request(self.pbft_handler, "Transaction Data", int(time.time()))
+        self.pbft_handler.count_of_timeout = time.time()
         time.sleep(2)
         
     def print_blockchain(self) -> None:
@@ -83,11 +84,10 @@ class Test:
         # self.pbft_algorithm.request_view_change(1)
         # assert self.pbft_algorithm.current_view == 1, "View Change Failed"
         
-
         
 if __name__ == "__main__":
     try:
-        test = Test(algorithm=PBFT(), count_of_nodes=5, count_of_faulty_nodes=0, port=5300, blocksize=10)
+        test = Test(algorithm=PBFT(), count_of_nodes=5, count_of_faulty_nodes=1, port=5300, blocksize=10)
         test.setup_client_nodes()
         test.setup_nodes()
         test.initialize_network()
