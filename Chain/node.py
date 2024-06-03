@@ -39,12 +39,15 @@ class Node:
         self.is_timer_on: bool = False
         self.timer_start: time = int(time.time())
         
+        self.current_view_number: int = 0
+        self.current_sequence_number: int = 0
+        
         
             
     def detect_failure_and_request_view_change(self)-> None:
-        print(f"Node {self.node_id} detected failure and is requesting view change.")
+        # print(f"Node {self.node_id} detected failure and is requesting view change.")
         new_view = self.current_view_number + 1
-        self.consensus_algorithm.request_view_change(self.node_id, new_view)
+        self.consensus_algorithm.request_view_change(self, new_view)
 
     def send_message_to_all(self, message) -> None:
         for peer in self.peers_list:
@@ -52,10 +55,19 @@ class Node:
             
     def receive_message(self, message) -> None:
         print(f"[Recieve] Node: {self.node_id}, ", end="")
-        if self.is_timer_on == True and (int(time.time()) - self.timer_start >= VIEW_CHANGE_TIME):
-            #TODO: View Change Protocol Starts     
-            print("[VIEW_CHANGE] View Change Starts!!!")
         
+        # [Debug] Timer debugger
+        # print("self.timer_on:", self.is_timer_on, "time interval:", (int(time.time()) - self.timer_start))
+        
+        ################################## Normal Case ###################################
+        # if self.is_timer_on == True and (int(time.time()) - self.timer_start >= VIEW_CHANGE_TIME):
+        
+        ############################ Forcing view change #################################
+        if True:
+            print("[VIEW_CHANGE] View Change Starts!!!")
+            self.detect_failure_and_request_view_change()
+            
+            
         message_dict = eval(message)
         if message_dict.get('stage') == "REQUEST":
             self.is_timer_on = True
