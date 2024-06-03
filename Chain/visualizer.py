@@ -31,7 +31,7 @@ def visualize_pbft(nodes, messages):
     fig, ax = plt.subplots(figsize=(len(stages)*2, len(nodes)))
     
     # 노드 순서를 오름차순으로 정렬
-    sorted_nodes = sorted(nodes, key=lambda x: int(x) if x != 'C' else -1)
+    sorted_nodes = sorted(nodes, key=lambda x: int(x) if x != 'C' else -1, reverse=True)
     
     for i, node in enumerate(sorted_nodes):
         ax.plot([0, len(stages)], [i, i], 'k-', linewidth=1)
