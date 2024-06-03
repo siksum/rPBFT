@@ -87,7 +87,7 @@ class Test:
         
 if __name__ == "__main__":
     try:
-        test = Test(algorithm=PBFT(), count_of_nodes=5, count_of_faulty_nodes=1, port=5300, blocksize=10)
+        test = Test(algorithm=PBFT(), count_of_nodes=10, count_of_faulty_nodes=3, port=5300, blocksize=10)
         test.setup_client_nodes()
         test.setup_nodes()
         test.initialize_network()
