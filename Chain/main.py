@@ -10,20 +10,18 @@ class Test:
         self.blockchain: Blockchain = Blockchain(algorithm, blocksize)
         self.pbft_algorithm = algorithm
         self.pbft_handler: PBFTHandler = None
-        
         self.client_node: ClientNode = []
-        
         self.count_of_nodes: int = count_of_nodes
         self.list_of_nodes: List[Node] = []
-        
         self.count_of_faulty_nodes: int = count_of_faulty_nodes
+        self.pbft_algorithm.count_of_faulty_nodes = count_of_faulty_nodes
         self.port: int = port
     
     def setup_client_nodes(self) -> None:
         """_summary_
             클라이언트 노드를 설정 -> 0번 노드가 클라이언트 노드
         """
-        client_node = ClientNode(0, self.blockchain, self.list_of_nodes, port=self.port)
+        client_node = ClientNode(0, self.blockchain, port=self.port)
         self.client_node = client_node
 
     def setup_nodes(self)-> None:
@@ -65,7 +63,6 @@ class Test:
         self.pbft_handler.initialize_network()
     
     def send_request(self) -> None:
-        
         self.client_node.send_request(self.pbft_handler, "Transaction Data", int(time.time()))
         self.pbft_handler.count_of_timeout = time.time()
         time.sleep(2)

@@ -12,18 +12,12 @@ if TYPE_CHECKING:
 
 class PBFT(ConsensusAlgorithm):
     def __init__(self):
-        self.current_view: int = 0
-        self.view_change_requests: List[ViewChange] = []
         self.client_node: 'ClientNode' = None
         self.count_of_faulty_nodes: int = 0
         self.nodes: List['Node'] = []
         
         self.timeout_base:float = 3.0
         self.count_of_timeout:float = 0.0
-        
-        self.count_of_prepared = 0
-        self.count_of_prepared = 0
-        self.count_of_committed = 0
         
         self.sequence_number = 0
         self.sent_replies: set = set() 
@@ -38,7 +32,6 @@ class PBFT(ConsensusAlgorithm):
             return True
         else:
             return False
-
 
     def handle_message(self, message: Dict[str, Any], node: 'Node') -> None:
         if message["stage"] == "PRE-PREPARE":
@@ -188,7 +181,6 @@ class PBFT(ConsensusAlgorithm):
     #         raise ValueError("No nodes available to select a new primary.")
 
 
-
 class PBFTHandler:
     def __init__(self, blockchain, consensus, client_node: List['ClientNode'], nodes: List['Node']):
         self.blockchain = blockchain
@@ -211,12 +203,6 @@ class PBFTHandler:
 
     def send_request_to_primary(self, request: Dict[str, Any]) -> None:
         self.primary_node.receive_request(request)
-
-    def add_node(self, node: 'Node') -> None:
-        for n in self.nodes:
-            n.connect_to_peer(node.host, node.port)
-            node.connect_to_peer(n.host, n.port)
-        self.nodes.append(node)
 
     def initialize_network(self) -> None:
         for node in self.nodes:

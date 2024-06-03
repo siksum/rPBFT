@@ -12,42 +12,27 @@ class Node:
     def __init__(self, client_node: 'ClientNode', node_id: int, is_faulty: bool, blockchain: Blockchain, host: str, port: int, consensus_algorithm):
         self.client_node: 'ClientNode' = client_node
         self.node_id: int = node_id
-        
         self.is_primary: bool = False
         self.is_faulty: bool = is_faulty  
         self.blockchain: Blockchain = blockchain
         self.host: str = host
         self.port: int = port
         self.consensus_algorithm = consensus_algorithm
+        
         self.server = Server(host, port, self)
         self.server.start()
         self.peers: List[Client] = []
         self.peers_list: List[Dict[str, Any]] = []
-        
-        self.processed_messages: List[Dict[str, Any]] = []
-        self.received_request_messages: Dict[str, Any] = {}
         
         self.processed_pre_prepare_messages: Dict[str, Any] = {}
         self.processed_prepare_messages: Dict[str, Any] = {}
         self.processed_commit_messages: Dict[str, Any] = {}
         self.processed_reply_messages: Dict[str, Any] = {}
         
+        self.received_request_messages: Dict[str, Any] = {}
         self.received_pre_prepare_messages: List[Dict[str, Any]] = []
         self.received_prepare_messages: List[Dict[str, Any]] = []
         self.received_commit_messages: List[Dict[str, Any]] = []
-        
-        self.last_primary_message_time: int = int(time.time())
-        self.current_view_number: int = 0 
-
-
-    def monitor_primary(self, message) -> None:
-        if self.is_primary:
-            return
-        # if message == str(None) or int(time.time()) - self.last_primary_message_time  > int(self.timeout_base):
-        #     self.detect_failure_and_request_view_change()
-        # else:
-        #     return None
-        # time.sleep(1)
             
     def detect_failure_and_request_view_change(self)-> None:
         print(f"Node {self.node_id} detected failure and is requesting view change.")
@@ -77,12 +62,11 @@ class Node:
             
 
 class ClientNode:
-    def __init__(self, client_id: int, blockchain:'Blockchain', list_of_nodes: List[Node], port: int) -> None:
+    def __init__(self, client_id: int, blockchain:'Blockchain', port: int) -> None:
         self.client_node_id: int = client_id
         self.blockchain: 'Blockchain' = blockchain
         self.port: int = port
         self.request_messages: Dict[str, Any] = {}
-        self.list_of_nodes: List[Node] = list_of_nodes
         self.received_replies: List[Dict[str, Any]] = []
         self.count_of_replies: int = 0
     
@@ -100,7 +84,6 @@ class ClientNode:
         pbft_handler.send_request_to_primary(self.request_messages)
 
     def receive_reply(self, reply_message: Dict[str, Any], count_of_faulty_nodes) -> None:
-        print(self.blockchain.consensus.count_of_timeout)
         is_timeout = self.blockchain.consensus.check_timeout(self.blockchain.consensus.count_of_timeout, self.blockchain.consensus.timeout_base)
         if is_timeout is False:
             return
