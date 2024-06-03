@@ -92,8 +92,6 @@ class PBFT(ConsensusAlgorithm):
     #         self.current_timeout *= 2
 
     def pre_prepare(self, request: Dict[str, Any], node: 'Node') -> None:
-        print(f"Node {node.node_id} pre-prepare stage")
-        
         self.sequence_number += 1   
         request_digest = hashlib.sha256(str(request).encode()).hexdigest()
         pre_prepare_message = {
@@ -113,7 +111,6 @@ class PBFT(ConsensusAlgorithm):
         node.send_message_to_all(pre_prepare_message)
             
     def prepare(self, pre_prepare_message: Dict[str, Any], node: 'Node') -> None:
-        print(f"Node {node.node_id} prepare stage")
         pre_prepare_message_digest = hashlib.sha256(str(pre_prepare_message).encode()).hexdigest()
         
         prepare_message= {
@@ -132,7 +129,6 @@ class PBFT(ConsensusAlgorithm):
         node.send_message_to_all(prepare_message)
             
     def commit(self, prepare_message: Dict[str, Any], node: 'Node') -> None:
-        print(f"Node {node.node_id} commit stage")
         prepare_message_digest = hashlib.sha256(str(prepare_message).encode()).hexdigest()
         
         commit_message = {
@@ -150,8 +146,6 @@ class PBFT(ConsensusAlgorithm):
         node.send_message_to_all(commit_message)
           
     def send_reply_to_client(self, commit_message: Dict[str, Any], node: 'Node') -> None:
-        print(f"Node {node.node_id} sending reply to client")
-        
         reply_message = {
             "stage": "REPLY",
             # "view": commit_message["view"],

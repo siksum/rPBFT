@@ -1,24 +1,65 @@
-[Recieve] Node: 2, stage: PRE-PREPARE, from: Node 1
-[Recieve] Node: 3, stage: PRE-PREPARE, from: Node 1
-[Recieve] Node: 4, stage: PRE-PREPARE, from: Node 1
+[Send] Client Node: 0 -> Primary Node: {'stage': 'REQUEST', 'data': 'Transaction Data', 'timestamp': 1717380615, 'client_id': 0}
+[Recieve] Primary Node: 1, content: {'stage': 'REQUEST', 'data': 'Transaction Data', 'timestamp': 1717380615, 'client_id': 0}
 
+
+### PRE-PREPARE
+[Recieve] Node: 2, stage: PRE-PREPARE, from: Node 1
+[Recieve] Node: 4, stage: PRE-PREPARE, from: Node 1
+[Recieve] Node: 3, stage: PRE-PREPARE, from: Node 1
+[Recieve] Node: 5, stage: PRE-PREPARE, from: Node 1
+
+
+### PREPARE
 [Recieve] Node: 1, stage: PREPARE, from: Node 2
 [Recieve] Node: 1, stage: PREPARE, from: Node 3
-[Recieve] Node: 2, stage: PREPARE, from: Node 3
-[Recieve] Node: 3, stage: PREPARE, from: Node 2
-[Recieve] Node: 4, stage: PREPARE, from: Node 2
-[Recieve] Node: 4, stage: PREPARE, from: Node 3
+[Recieve] Node: 1, stage: PREPARE, from: Node 4
+[Recieve] Node: 1, stage: PREPARE, from: Node 5
 
-[Recieve] Node: 1, stage: COMMIT, from: Node 2
-[Recieve] Node: 1, stage: COMMIT, from: Node 3
-[Recieve] Node: 2, stage: COMMIT, from: Node 3
-[Recieve] Node: 2, stage: COMMIT, from: Node 1
+[Recieve] Node: 2, stage: PREPARE, from: Node 3
+[Recieve] Node: 2, stage: PREPARE, from: Node 4
+[Recieve] Node: 2, stage: PREPARE, from: Node 5
+
+[Recieve] Node: 3, stage: PREPARE, from: Node 4
+[Recieve] Node: 3, stage: PREPARE, from: Node 5
+
+[Recieve] Node: 4, stage: PREPARE, from: Node 3
+[Recieve] Node: 4, stage: PREPARE, from: Node 5
+[Recieve] Node: 4, stage: PREPARE, from: Node 2
+
+[Recieve] Node: 5, stage: PREPARE, from: Node 3
+[Recieve] Node: 5, stage: PREPARE, from: Node 2
+[Recieve] Node: 5, stage: PREPARE, from: Node 4
+
+### COMMIT
 [Recieve] Node: 3, stage: COMMIT, from: Node 2
 [Recieve] Node: 3, stage: COMMIT, from: Node 1
+[Recieve] Node: 2, stage: COMMIT, from: Node 1
+[Recieve] Node: 2, stage: COMMIT, from: Node 5
+[Recieve] Node: 1, stage: COMMIT, from: Node 4
+[Recieve] Node: 5, stage: COMMIT, from: Node 2
+[Recieve] Node: 1, stage: COMMIT, from: Node 5
 [Recieve] Node: 4, stage: COMMIT, from: Node 1
-[Recieve] Node: 4, stage: COMMIT, from: Node 3
+[Recieve] Node: 5, stage: COMMIT, from: Node 1
+[Recieve] Node: 2, stage: COMMIT, from: Node 4
+[Recieve] Node: 3, stage: COMMIT, from: Node 5
+[Recieve] Node: 1, stage: COMMIT, from: Node 3
+[Recieve] Node: 1, stage: COMMIT, from: Node 2
+[Recieve] Node: 3, stage: COMMIT, from: Node 4
 [Recieve] Node: 4, stage: COMMIT, from: Node 2
+[Recieve] Node: 5, stage: COMMIT, from: Node 3
+[Recieve] Node: 4, stage: COMMIT, from: Node 5
+[Recieve] Node: 5, stage: COMMIT, from: Node 4
+[Recieve] Node: 2, stage: COMMIT, from: Node 3
+[Recieve] Node: 4, stage: COMMIT, from: Node 3
 
-[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717379087, 'client_id': 0, 'result': 'Execution Result', 'node_id': 1}
-[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717379087, 'client_id': 0, 'result': 'Execution Result', 'node_id': 2}
-[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717379087, 'client_id': 0, 'result': 'Execution Result', 'node_id': 3}
+### REPLY
+[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717380615, 'client_id': 0, 'result': 'Execution Result', 'node_id': 3}
+[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717380615, 'client_id': 0, 'result': 'Execution Result', 'node_id': 2}
+[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717380615, 'client_id': 0, 'result': 'Execution Result', 'node_id': 1}
+[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717380615, 'client_id': 0, 'result': 'Execution Result', 'node_id': 5}
+[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717380615, 'client_id': 0, 'result': 'Execution Result', 'node_id': 4}
+
+
+
+
+
