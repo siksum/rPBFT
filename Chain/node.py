@@ -52,7 +52,7 @@ class Node:
             
     def receive_message(self, message) -> None:
         print(f"[Recieve] Node: {self.node_id}, ", end="")
-        if self.timer_start == True and (int(time.time()) - self.timer_start >= VIEW_CHANGE_TIME):
+        if self.is_timer_on == True and (int(time.time()) - self.timer_start >= VIEW_CHANGE_TIME):
             #TODO: View Change Protocol Starts     
             print("[VIEW_CHANGE] View Change Starts!!!")
         
