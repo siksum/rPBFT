@@ -75,7 +75,7 @@ class PBFT(ConsensusAlgorithm):
         
         elif message["stage"] == "NEW-VIEW":
             node.receive_new_view_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
-            if message["node_id"] == node.primary_node.node_id:
+            if message["node_id"] == message["view"]:
                 self.initialize_memory(node)
                 self.conduct_previous_view_stage(node)
 
@@ -191,7 +191,7 @@ class PBFT(ConsensusAlgorithm):
             print(node.node_id, node.is_primary, node.is_faulty)            
             
     def conduct_previous_view_stage(self, node: 'Node') -> None:
-        node.receive_message(node.received_request_messages)
+        self.pre_prepare(node.received_request_messages, node)
 
 class PBFTHandler:
     def __init__(self, blockchain, consensus, client_node: List['ClientNode'], nodes: List['Node']):
