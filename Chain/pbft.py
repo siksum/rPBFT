@@ -21,8 +21,6 @@ class PBFT(ConsensusAlgorithm):
         
         self.sequence_number = 0
         self.sent_replies: set = set() 
-        
-        self.view_change_requests: set = set() 
     
     
     def set_nodes(self, nodes: List['Node']) -> None:
@@ -50,31 +48,31 @@ class PBFT(ConsensusAlgorithm):
                 self.commit(message, node)
                 
         elif message["stage"] == "COMMIT":
-            node.is_timer_on = False            
             node.received_commit_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
             if node.is_faulty is True:
                 return
             if len(node.received_commit_messages) >= (2 * self.count_of_faulty_nodes + 1) and node.validate_message(message, node.received_commit_messages) is True:
                 self.send_reply_to_client(message, node)
                 
-        elif message["stage"] == "VIEW-CHANGE":
-            # print("received view change message...")
-            self.handle_view_change(message, node)
-            
-        elif message["stage"] == "NEW-VIEW":
-            print("received new view message...")
-            self.handle_new_view(message, node)
+        # elif stage == "VIEW-CHANGE":
+        #     self.handle_view_change(message, node)
 
-    def request_view_change(self, node: 'Node', new_view: int) -> None:
-        view_change_message = {
-            "stage": "VIEW-CHANGE",
-            "new_view": new_view,
-            "node_id": node.node_id
-        }
-        
-        # TODO: need to fix -> code works only when commented out
-        # self.view_change_requests.add(view_change_message)
-        node.send_message_to_all(view_change_message)
+    # def request_view_change(self, node_id: int, new_view: int) -> None:
+    #     view_change = ViewChange(node_id)
+    #     view_change.change_view()
+    #     view_change_message = {
+    #         "stage": "VIEW-CHANGE",
+    #         "new_view": new_view,
+    #         "node_id": node_id
+    #     }
+    #     self.view_change_requests.append(view_change)
+    #     self.broadcast_view_change(view_change_message)
+
+    #     time.sleep(self.current_timeout)
+    #     if self.check_view_change_agreement(new_view):
+    #         self.start_new_view(new_view)
+    #     else:
+    #         self.current_timeout *= 2
 
     def pre_prepare(self, request: Dict[str, Any], node: 'Node') -> None:
         if node.is_faulty is True:
@@ -84,8 +82,8 @@ class PBFT(ConsensusAlgorithm):
         request_digest = hashlib.sha256(str(request).encode()).hexdigest()
         pre_prepare_message = {
             "stage": "PRE-PREPARE",
-            "view": node.current_view_number,
-            "seq_num": node.current_sequence_number,
+            # "view": self.current_view,
+            "seq_num": self.sequence_number,
             "digest": request_digest,
             "data": request,
             "node_id": node.node_id
@@ -103,7 +101,7 @@ class PBFT(ConsensusAlgorithm):
         
         prepare_message= {
             "stage": "PREPARE",
-            "view": node.current_view_number,
+            # "view": self.current_view,
             "seq_num": pre_prepare_message["seq_num"],
             "digest": pre_prepare_message_digest,
             "node_id": node.node_id,
@@ -121,7 +119,7 @@ class PBFT(ConsensusAlgorithm):
         
         commit_message = {
             "stage": "COMMIT",
-            "view": prepare_message["view"],
+            # "view": prepare_message["view"],
             "seq_num": prepare_message["seq_num"],
             "digest": prepare_message_digest,
             "node_id": node.node_id,
@@ -136,7 +134,7 @@ class PBFT(ConsensusAlgorithm):
     def send_reply_to_client(self, commit_message: Dict[str, Any], node: 'Node') -> None:
         reply_message = {
             "stage": "REPLY",
-            "view": commit_message["view"],
+            # "view": commit_message["view"],
             "timestamp": int(time.time()),
             "client_id": node.client_node.client_node_id,
             "result": "Execution Result",
@@ -149,49 +147,13 @@ class PBFT(ConsensusAlgorithm):
             return
         node.client_node.receive_reply(reply_message, self.count_of_faulty_nodes)
         
-    def handle_view_change(self, message: Dict[str, Any], node: 'Node') -> None:
-        new_view = message["new_view"]
-        if new_view > node.current_view_number:
-            self.view_change_requests.add(
-                (f"Current View: {node.current_view_number}, "
-                f"Node ID: {node.node_id}")
-            )
-            
-            # if self.check_view_change_agreement(new_view):
-            # faulty node debug
-            F = 1
-            
-            # TODO: implement is_primary check
-            if len(self.view_change_requests) > 2 * F + 1: 
-                print("new view triggered!!!")
-                self.new_view(new_view, node)
+    # def handle_view_change(self, message: Dict[str, Any], node: 'Node') -> None:
+    #     new_view = message["new_view"]
+    #     if new_view > self.current_view:
+    #         self.view_change_requests.append(ViewChange(node.node_id))
+    #         if self.check_view_change_agreement(new_view):
+    #             self.start_new_view(new_view)
 
-    def new_view(self, new_view: int, node: 'Node') -> None:
-        self.current_view = new_view
-        new_view_message = {
-            "stage": "NEW-VIEW",
-            "new_view": node.current_view_number,
-            "node_id": node.node_id
-        }
-        print("ready to broadcast new view!")
-        
-        # TODO: [Errno 32] Broken pipe
-        try:
-            node.send_message_to_all(new_view_message)
-        except Exception as e:
-            print(e)
-        
-    # TODO: would work if the error above fixes
-    def handle_new_view(self, message: Dict[str, Any], node: 'Node') -> None:
-        print("handle new view!")
-        new_view = message["new_view"]
-        node.current_view_number = new_view
-        node.received_pre_prepare_messages = set()
-        node.received_prepare_messages = set()
-        node.received_commit_messages = set()
-        for request_message in node.received_request_messages():
-            node.send_message_to_all(request_message)
-        
     # def broadcast_view_change(self, view_change_message: Dict[str, Any]) -> None:
     #     for node in self.nodes:
     #         node.receive_message(view_change_message)
@@ -200,12 +162,15 @@ class PBFT(ConsensusAlgorithm):
     #     count = sum(1 for vc in self.view_change_requests if vc.current_view == new_view)
     #     return count >= (2 * self.faulty_nodes_count() + 1)
 
-        
-        # if self.nodes:
-        #     self.primary_node = self.select_new_primary(new_view)
-        #     print(f"New primary selected: Node {self.primary_node.node_id}")
-        # else:
-        #     print("Error: No nodes available to select a new primary.")
+    # def start_new_view(self, new_view: int) -> None:
+    #     self.current_view = new_view
+    #     self.current_timeout = self.timeout_base
+    #     print(f"Starting new view: {new_view}")
+    #     if self.nodes:
+    #         self.primary_node = self.select_new_primary(new_view)
+    #         print(f"New primary selected: Node {self.primary_node.node_id}")
+    #     else:
+    #         print("Error: No nodes available to select a new primary.")
 
     # def select_new_primary(self, new_view: int) -> 'Node':
     #     if len(self.nodes) > 0:

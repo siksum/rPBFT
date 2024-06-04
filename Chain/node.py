@@ -7,9 +7,7 @@ from network import Server
 if TYPE_CHECKING:
     from pbft import PBFTHandler, PBFT
     from network import Server, Client
-
-VIEW_CHANGE_TIME = 2
-
+    
 class Node:
     def __init__(self, client_node: 'ClientNode', node_id: int, is_faulty: bool, blockchain: Blockchain, host: str, port: int, consensus_algorithm):
         self.client_node: 'ClientNode' = client_node
@@ -37,17 +35,14 @@ class Node:
         self.received_commit_messages: List[Dict[str, Any]] = []
         
         self.is_timer_on: bool = False
-        self.timer_start: time = int(time.time())
+        self.timer_start: float = 0.0
         
         self.current_view_number: int = 0
         self.current_sequence_number: int = 0
-        
-        
             
     def detect_failure_and_request_view_change(self)-> None:
-        # print(f"Node {self.node_id} detected failure and is requesting view change.")
         new_view = self.current_view_number + 1
-        self.consensus_algorithm.request_view_change(self, new_view)
+        self.consensus_algorithm.request_view_change(self.node_id, new_view)
 
     def send_message_to_all(self, message) -> None:
         for peer in self.peers_list:
@@ -55,23 +50,10 @@ class Node:
             
     def receive_message(self, message) -> None:
         print(f"[Recieve] Node: {self.node_id}, ", end="")
-        
-        # [Debug] Timer debugger
-        # print("self.timer_on:", self.is_timer_on, "time interval:", (int(time.time()) - self.timer_start))
-        
-        ################################## Normal Case ###################################
-        # if self.is_timer_on == True and (int(time.time()) - self.timer_start >= VIEW_CHANGE_TIME):
-        
-        ############################ Forcing view change #################################
-        if True:
-            print("[VIEW_CHANGE] View Change Starts!!!")
-            self.detect_failure_and_request_view_change()
-            
-            
         message_dict = eval(message)
         if message_dict.get('stage') == "REQUEST":
             self.is_timer_on = True
-            self.timer_start = int(time.time())
+            self.timer_start = time.time()
             if self.received_request_messages == {}:
                 self.received_request_messages = message_dict
                 print(f"stage: {message_dict.get('stage')}, from: Client {message_dict.get('client_id')}")
@@ -121,14 +103,17 @@ class ClientNode:
                 pbft_handler.send_request_to_primary(self.request_messages)
             else:
                 node.send_message_to_all(self.request_messages)
-            self.primary_node.call_pre_prepare(self.request_messages)
+            
+            if self.primary_node.node.is_faulty is True:
+                return
+            else:
+                self.primary_node.call_pre_prepare(self.request_messages)
             
 
     def receive_reply(self, reply_message: Dict[str, Any], count_of_faulty_nodes) -> None:
         is_timeout = self.blockchain.consensus.check_timeout(self.blockchain.consensus.count_of_timeout, self.blockchain.consensus.timeout_base)
         if is_timeout is False:
-            return       
-        
+            return
         else:
             self.count_of_replies += 1
             self.received_replies.append(reply_message)
