@@ -16,9 +16,6 @@ class PBFT(ConsensusAlgorithm):
         self.count_of_faulty_nodes: int = 0
         self.nodes: List['Node'] = []
         
-        self.timeout_base:float = 2.0
-        self.count_of_timeout:float = 0.0
-        
         self.sequence_number = 0
         self.sent_replies: set = set() 
     
@@ -36,9 +33,6 @@ class PBFT(ConsensusAlgorithm):
         node.received_pre_prepare_messages = []
         node.received_prepare_messages = []
         node.received_commit_messages = []
-        
-        node.is_timer_on = False
-        node.timer_start = 0.0
         
         node.received_view_change_messages = []
         node.receive_new_view_messages = []       
@@ -59,6 +53,10 @@ class PBFT(ConsensusAlgorithm):
                 self.commit(message, node)
                 
         elif message["stage"] == "COMMIT":
+            # 커밋 메시지 들어오면 타이머 끔
+            if node.view_change_timer:
+                node.view_change_timer.cancel()
+                
             node.received_commit_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
             if node.is_faulty is True:
                 return
@@ -66,6 +64,9 @@ class PBFT(ConsensusAlgorithm):
                 self.send_reply_to_client(message, node)
                 
         elif message["stage"] == "VIEW-CHANGE":
+            if node.view_change_timer:
+                node.view_change_timer.cancel()
+            
             node.received_view_change_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
             node.current_view_number = message.get('new_view')
             if node.current_view_number == node.node_id:
@@ -73,7 +74,9 @@ class PBFT(ConsensusAlgorithm):
                     self.select_new_primary(node)
                     self.create_new_view(node)
         
-        elif message["stage"] == "NEW-VIEW":
+        elif message["stage"] == "NEW-VIEW":     
+            if node.view_change_timer:
+                node.view_change_timer.cancel()       
             node.receive_new_view_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
             if message["node_id"] == message["view"]:
                 self.initialize_memory(node)
@@ -166,6 +169,7 @@ class PBFT(ConsensusAlgorithm):
                                                         'message': view_change_message})
         else:
             return
+        print(f"[VIEWCHANGE] Node: {node.node_id} Message: {view_change_message}")
         node.send_message_to_all(view_change_message)
     
     def create_new_view(self, node: 'Node') -> None:
@@ -189,6 +193,12 @@ class PBFT(ConsensusAlgorithm):
         
     def conduct_previous_view_stage(self, node: 'Node') -> None:
         self.pre_prepare(node.received_request_messages, node)
+        
+    def cancel_all_view_change_timer(self):
+        for node in self.nodes:
+            if node.view_change_timer:
+                node.view_change_timer.cancel()
+                print(node.view_change_timer)
 
 class PBFTHandler:
     def __init__(self, blockchain, consensus, client_node: List['ClientNode'], nodes: List['Node']):
@@ -218,7 +228,7 @@ class PBFTHandler:
             for peer in self.nodes:
                 if node.node_id != peer.node_id:
                     node.peers_list.append({"node_id": peer.node_id, "client": Client(peer.host, peer.port)})
-
+    
     def stop(self) -> None:
         for node in self.nodes:
             node.stop()

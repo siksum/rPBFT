@@ -1,3 +1,4 @@
+import threading
 import time
 from typing import List, Dict, TYPE_CHECKING, Any
 from blockchain import Blockchain
@@ -42,9 +43,6 @@ class Node:
         self.received_prepare_messages: List[Dict[str, Any]] = []
         self.received_commit_messages: List[Dict[str, Any]] = []
         
-        self.is_timer_on: bool = False
-        self.timer_start: float = 0.0
-        
         self.current_view_number: int = 1
         self.current_sequence_number: int = 0
 
@@ -53,6 +51,9 @@ class Node:
         
         self.received_view_change_messages: List[Dict[str, Any]] = []
         self.receive_new_view_messages: List[Dict[str, Any]] = []
+        
+        self.view_change_timer: threading.Timer = None
+        self.view_change_timeout_base: float = 2.0
         
     def detect_failure_and_request_view_change(self)-> None:
         new_view = self.current_view_number + 1
@@ -63,20 +64,23 @@ class Node:
     def send_message_to_all(self, message) -> None:
         for peer in self.peers_list:
             peer["client"].send_message(str(message))
+    
+    def view_change_callback(self) -> None:
+        self.consensus_algorithm.view_change(self)
+        self.view_change_timer.cancel()
             
     def receive_message(self, message) -> None:
+        # 노드 입장에서 None 메시지 받았을때는 타이머 꺼질때까지 아무것도 안해도 됨.
         if message == "None":
-            is_timeout = check_timeout(self.timer_start, self.consensus_algorithm.timeout_base)
-            if is_timeout is False:
-                self.timer_start = 0.0
-                self.consensus_algorithm.view_change(self)
             return
         
         print(f"[Recieve] Node: {self.node_id}, ", end="")
         message_dict = eval(message)
         if message_dict.get('stage') == "REQUEST":
-            self.is_timer_on = True
-            self.timer_start = time.time()
+            # request 메시지 받으면 타이머 켬. 시간제한 2초.
+            # threading.Timer -> 제한시간동안 아무것도 안하면 2번째 인자에 들어간 함수가 실행됨.
+            self.view_change_timer = threading.Timer(self.view_change_timeout_base, lambda: self.view_change_callback())
+            self.view_change_timer.start()
             if self.received_request_messages == {}:
                 self.received_request_messages = message_dict
                 print(f"stage: {message_dict.get('stage')}, from: Client {message_dict.get('client_id')}")
@@ -109,7 +113,6 @@ class ClientNode:
         self.primary_node: 'PrimaryNode' = None
         
     def send_request(self, pbft_handler:'PBFTHandler', data: str, timestamp: int):
-        pbft_handler.consensus.count_of_timeout = int(time.time())
         request= {
             "stage": "REQUEST",
             "data": data,
@@ -125,21 +128,23 @@ class ClientNode:
 
 
     def receive_reply(self, reply_message: Dict[str, Any], count_of_faulty_nodes) -> None:
-        is_timeout = check_timeout(self.blockchain.consensus.count_of_timeout, self.blockchain.consensus.timeout_base)
-        if is_timeout is False:
-            return
-        else:
-            self.count_of_replies += 1
-            self.received_replies.append(reply_message)
-            print(f"[Recieve] Client Node: {self.client_node_id} received reply: {reply_message}")
+        if self.nodes[self.client_node_id].view_change_timer:
+            self.nodes[self.client_node_id].view_change_timer.cancel()
+        self.count_of_replies += 1
+        self.received_replies.append(reply_message)
+        print(f"[Recieve] Client Node: {self.client_node_id} received reply: {reply_message}")
+        
+        if self.count_of_replies >= count_of_faulty_nodes + 1:
+            for node in self.nodes:
+                if node.view_change_timer:
+                    node.view_change_timer.cancel()            
             
-            if self.count_of_replies >= count_of_faulty_nodes + 1:
-                if self.validate_reply(reply_message, self.received_replies) is True:
-                    self.blockchain.add_block_to_blockchain(reply_message)
-                    print(f"Client Node added block: {reply_message}")
-                    return
-            else:
-                print(f"Client Node: {self.client_node_id} received {self.count_of_replies} replies.")
+            if self.validate_reply(reply_message, self.received_replies) is True:
+                self.blockchain.add_block_to_blockchain(reply_message)
+                print(f"Client Node added block: {reply_message}")
+                return
+        else:
+            print(f"Client Node: {self.client_node_id} received {self.count_of_replies} replies.")
             
     def validate_reply(self, reply_message: Dict[str, Any], received_replies) -> None:
         for message_of_stage in received_replies:
@@ -161,7 +166,6 @@ class PrimaryNode:
         print(f"[Recieve] Primary Node: {self.node_id}, content: {request}")
         
         if self.node.is_faulty is True:
-            time.sleep(2)
             self.node.send_message_to_all(None)
         else:
             self.node.received_request_messages['node_id_to'] = self.node_id
