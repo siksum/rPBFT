@@ -63,7 +63,7 @@ class Test:
     def send_request(self) -> None:
         self.client_node.send_request(self.pbft_handler, "Transaction Data", int(time.time()))        
         # 최종 생성된 체인 확인하는 시간
-        time.sleep(4)
+        time.sleep(3)
         
     def print_blockchain(self) -> None:
         for block in self.blockchain.chain:

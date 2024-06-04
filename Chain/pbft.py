@@ -35,7 +35,8 @@ class PBFT(ConsensusAlgorithm):
         node.received_commit_messages = []
         
         node.received_view_change_messages = []
-        node.receive_new_view_messages = []       
+        node.receive_new_view_messages = []   
+        node.new_view_counter = False    
         
         
     def handle_message(self, message: Dict[str, Any], node: 'Node') -> None:
@@ -51,9 +52,9 @@ class PBFT(ConsensusAlgorithm):
                 return
             if len(node.received_prepare_messages) >= 2 * self.count_of_faulty_nodes and node.validate_message(message, node.received_prepare_messages) is True:
                 self.commit(message, node)
-                
+        
+        # COMMIT, VIEW-CHANGE, NEW-VIEW 메시지를 받은 노드는 더이상 타이머가 필요없으므로 종료시킴.
         elif message["stage"] == "COMMIT":
-            # 커밋 메시지 들어오면 타이머 끔
             if node.view_change_timer:
                 node.view_change_timer.cancel()
                 
@@ -70,7 +71,10 @@ class PBFT(ConsensusAlgorithm):
             node.received_view_change_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
             node.current_view_number = message.get('new_view')
             if node.current_view_number == node.node_id:
-                if len(node.received_view_change_messages) >= 2 * self.count_of_faulty_nodes + 1:
+                # 여기서 len > 2 * F + 1이 되면 VIEW-CHANGE 메시지 들어올때마다 new view 메시지를 또 보내는 버그가 있었음.
+                # new_view_counter를 넣어서 전에 new_view를 보낸 노드는 또 보내지 않도록 하는 방식으로 해결.
+                if len(node.received_view_change_messages) >= 2 * self.count_of_faulty_nodes + 1 and node.new_view_counter is False:
+                    node.new_view_counter = True
                     self.select_new_primary(node)
                     self.create_new_view(node)
         

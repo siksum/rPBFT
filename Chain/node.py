@@ -54,6 +54,7 @@ class Node:
         
         self.view_change_timer: threading.Timer = None
         self.view_change_timeout_base: float = 2.0
+        self.new_view_counter: bool = False
         
     def detect_failure_and_request_view_change(self)-> None:
         new_view = self.current_view_number + 1
@@ -64,23 +65,31 @@ class Node:
     def send_message_to_all(self, message) -> None:
         for peer in self.peers_list:
             peer["client"].send_message(str(message))
-    
+     
     def view_change_callback(self) -> None:
+        """_summary_
+            view change를 실행하고, 그와 동시에 타이머를 끔.
+        """
         self.consensus_algorithm.view_change(self)
         self.view_change_timer.cancel()
             
     def receive_message(self, message) -> None:
-        # 노드 입장에서 None 메시지 받았을때는 타이머 꺼질때까지 아무것도 안해도 됨.
+        """_summary_
+            1. 노드 입장에서 None 메시지 받았을때는 타이머 꺼질때까지 아무것도 안해도 됨.
+            2. request 메시지 받으면 타이머 켬.
+            3. 제한시간동안 아무것도 안하면 Timer의 2번째 인자에 들어간 함수가 실행됨.
+            4. 타이머를 켠 뒤 handle_message 수행
+        """
         if message == "None":
             return
         
         print(f"[Recieve] Node: {self.node_id}, ", end="")
         message_dict = eval(message)
         if message_dict.get('stage') == "REQUEST":
-            # request 메시지 받으면 타이머 켬. 시간제한 2초.
-            # threading.Timer -> 제한시간동안 아무것도 안하면 2번째 인자에 들어간 함수가 실행됨.
-            self.view_change_timer = threading.Timer(self.view_change_timeout_base, lambda: self.view_change_callback())
-            self.view_change_timer.start()
+            if not self.view_change_timer:
+                self.view_change_timer = threading.Timer(self.view_change_timeout_base, lambda: self.view_change_callback())
+                self.view_change_timer.start()
+                
             if self.received_request_messages == {}:
                 self.received_request_messages = message_dict
                 print(f"stage: {message_dict.get('stage')}, from: Client {message_dict.get('client_id')}")
@@ -128,6 +137,11 @@ class ClientNode:
 
 
     def receive_reply(self, reply_message: Dict[str, Any], count_of_faulty_nodes) -> None:
+        """_summary_
+            1. reply를 받은 노드는 타이머를 종료.
+            2. reply가 f + 1개 모이면 모든 노드의 타이머를 끔. 끄지 않을 시 reply 전송 이후에 타이머가 트리거되는 흐름 발생.
+            3. 이후 reply를 검증하고 블록 추가.
+        """
         if self.nodes[self.client_node_id].view_change_timer:
             self.nodes[self.client_node_id].view_change_timer.cancel()
         self.count_of_replies += 1
@@ -137,7 +151,7 @@ class ClientNode:
         if self.count_of_replies >= count_of_faulty_nodes + 1:
             for node in self.nodes:
                 if node.view_change_timer:
-                    node.view_change_timer.cancel()            
+                    node.view_change_timer.cancel()    
             
             if self.validate_reply(reply_message, self.received_replies) is True:
                 self.blockchain.add_block_to_blockchain(reply_message)
