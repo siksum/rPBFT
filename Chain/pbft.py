@@ -187,9 +187,6 @@ class PBFT(ConsensusAlgorithm):
         node.primary_node.node.is_primary = True
         original_primary.node.is_primary = False
         
-        for node in self.nodes:
-            print(node.node_id, node.is_primary, node.is_faulty)            
-            
     def conduct_previous_view_stage(self, node: 'Node') -> None:
         self.pre_prepare(node.received_request_messages, node)
 

@@ -7,7 +7,14 @@ from network import Server
 if TYPE_CHECKING:
     from pbft import PBFTHandler, PBFT
     from network import Server, Client
-    
+
+def check_timeout(timer_start, timebase) :
+    time_diff = time.time() - timer_start
+    if time_diff > timebase:
+        return False
+    else:
+        return True
+
 class Node:
     def __init__(self, client_node: 'ClientNode', node_id: int, is_faulty: bool, blockchain: Blockchain, host: str, port: int, consensus_algorithm):
         self.client_node: 'ClientNode' = client_node
@@ -51,12 +58,7 @@ class Node:
         new_view = self.current_view_number + 1
         self.consensus_algorithm.request_view_change(self.node_id, new_view)
 
-    def check_timeout(self, timer_start, timebase) :
-        time_diff = time.time() - timer_start
-        if time_diff > timebase:
-            return False
-        else:
-            return True
+
     
     def send_message_to_all(self, message) -> None:
         for peer in self.peers_list:
@@ -64,7 +66,7 @@ class Node:
             
     def receive_message(self, message) -> None:
         if message == "None":
-            is_timeout = self.check_timeout(self.timer_start, self.consensus_algorithm.timeout_base)
+            is_timeout = check_timeout(self.timer_start, self.consensus_algorithm.timeout_base)
             if is_timeout is False:
                 self.timer_start = 0.0
                 self.consensus_algorithm.view_change(self)
@@ -123,7 +125,7 @@ class ClientNode:
 
 
     def receive_reply(self, reply_message: Dict[str, Any], count_of_faulty_nodes) -> None:
-        is_timeout = self.blockchain.consensus.check_timeout(self.blockchain.consensus.count_of_timeout, self.blockchain.consensus.timeout_base)
+        is_timeout = check_timeout(self.blockchain.consensus.count_of_timeout, self.blockchain.consensus.timeout_base)
         if is_timeout is False:
             return
         else:

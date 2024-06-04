@@ -1,8 +1,3 @@
-1 True True
-2 False False
-3 False False
-4 False False
-5 False False
 [Send] Client Node: 0 -> Primary Node: {'stage': 'REQUEST', 'data': 'Transaction Data', 'timestamp': 1717487234, 'client_id': 0}
 [Recieve] Node: 1, stage: REQUEST, from: Client 0
 stage: REQUEST, from: Node None
