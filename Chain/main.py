@@ -1,56 +1,98 @@
 from blockchain import Blockchain
-from pbft import PBFT, PBFTNetwork
-from node import Node, ClientNode
+from pbft import PBFT, PBFTHandler
+from node import Node, ClientNode, PrimaryNode
+from constant import *
 import time
+from typing import List
 
-if __name__ == "__main__":
-    try:
-        # Setup the blockchain, PBFT algorithm, and nodes
-        blockchain = Blockchain()
-        pbft_algorithm = PBFT()
+class Test:
+    def __init__(self, algorithm, count_of_nodes:int, count_of_faulty_nodes:int, port:int, blocksize:int):
+        self.blockchain: Blockchain = Blockchain(algorithm, blocksize)
+        self.pbft_algorithm = algorithm
+        self.pbft_handler: PBFTHandler = None
+        self.client_node: ClientNode = []
+        self.count_of_nodes: int = count_of_nodes
+        self.list_of_nodes: List[Node] = []
+        self.count_of_faulty_nodes: int = count_of_faulty_nodes
+        self.pbft_algorithm.count_of_faulty_nodes = count_of_faulty_nodes
+        self.port: int = port
+    
+    def setup_client_nodes(self) -> None:
+        """_summary_
+            클라이언트 노드를 설정 -> 0번 노드가 클라이언트 노드
+        """
+        client_node = ClientNode(0, self.blockchain, nodes=self.list_of_nodes, port=self.port)
+        self.client_node = client_node
 
-        count_of_nodes = 5
-        list_of_nodes = []
-        count_of_faulty_nodes = 0
+    def setup_nodes(self)-> None:
+        """_summary_
+            리스트에 노드를 추가하고, primary node를 설정 -> 1번 노드가 primary node
+            view change때는 랜덤으로 primary node를 설정
+        """
+        for i in range(1, self.count_of_nodes + 1):
+            node:Node = Node(self.client_node, 
+                            i, 
+                            False, 
+                            self.blockchain, 
+                            LOCALHOST, 
+                            self.port + i, 
+                            self.pbft_algorithm)
+            self.list_of_nodes.append(node)
         
-        if count_of_faulty_nodes != 0:
-            f = count_of_faulty_nodes
-            m = (f - 1) // 3
-            count_of_nodes = 3 * m + 2 * f
-            print(f"Total nodes: {count_of_nodes}")
-            
-            
-        for i in range(1, count_of_nodes + 1):
-            node = Node(i, 'localhost', 5100 + i, blockchain, pbft_algorithm)
-            list_of_nodes.append(node)
+        self.primary_node = PrimaryNode(self.list_of_nodes[0], self.pbft_algorithm)
+        self.primary_node.node.is_primary = True
+           
+        for i in range(1, self.count_of_faulty_nodes + 1):
+            faulty_nodes = Node(self.client_node, 
+                i+self.count_of_nodes, 
+                True, 
+                self.blockchain, 
+                LOCALHOST, 
+                self.port + self.count_of_nodes + i, 
+                self.pbft_algorithm)
+            self.list_of_nodes.append(faulty_nodes)
+    
 
-        # Initialize PBFT network with nodes
-        pbft_network = PBFTNetwork(list_of_nodes)
-
-        # Create client node with node_id = 0 and add it to the network
-        network_client = ClientNode(0, pbft_network, list_of_nodes)
-        pbft_network.client_node = network_client
+    def initialize_network(self) -> None:
+        self.pbft_handler = PBFTHandler(self.blockchain, self.pbft_algorithm, self.client_node, self.list_of_nodes) 
         
-        # Initialize the network
-        pbft_network.initialize_network()
-
-        # Send a request to the network
-        network_client.send_request("Transaction Data")
-
+        for node in self.list_of_nodes:
+            node.client_node = self.client_node
+        
+        self.pbft_algorithm.count_of_faulty_nodes = len(self.pbft_handler.faulty_nodes)
+        self.pbft_handler.initialize_network()
+    
+    def send_request(self) -> None:
+        self.client_node.send_request(self.pbft_handler, "Transaction Data", int(time.time()))
+        self.pbft_handler.count_of_timeout = time.time()
         time.sleep(2)
-
-        # Print the blockchain and check if it is valid
-        for block in blockchain.chain:
+        
+    def print_blockchain(self) -> None:
+        for block in self.blockchain.chain:
             print(f"Block {block.index} [Hash: {block.current_block_hash}]")
-
-        # Check if the blockchain is valid
-        is_valid = blockchain.is_chain_valid()
+    
+    def check_blockchain_validity(self) -> None:
+        is_valid: bool = self.blockchain.is_valid_block(self.blockchain.get_latest_block())
         print(f"Blockchain valid: {is_valid}")
 
-        # Add a new node to the network
-        new_node = Node(6, 'localhost', 5107, blockchain, pbft_algorithm)
-        pbft_network.add_node(new_node)
-        print(f"New node {new_node.node_id} added and registered.")
-
+    def test_view_change(self) -> None:
+        if self.list_of_nodes:
+            self.list_of_nodes[0].detect_failure_and_request_view_change()
+        # self.pbft_algorithm.request_view_change(1)
+        # assert self.pbft_algorithm.current_view == 1, "View Change Failed"
+        
+        
+if __name__ == "__main__":
+    try:
+        test = Test(algorithm=PBFT(), count_of_nodes=5, count_of_faulty_nodes=1, port=5300, blocksize=10)
+        test.setup_client_nodes()
+        test.setup_nodes()
+        test.initialize_network()
+        test.send_request()
+        test.print_blockchain()
+        # test.check_blockchain_validity()
+        
+        # test.test_view_change()
     finally:
-        pbft_network.stop()
+        if hasattr(test, 'pbft_handler'):
+            test.pbft_handler.stop()
