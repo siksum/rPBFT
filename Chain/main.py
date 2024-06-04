@@ -30,9 +30,9 @@ class Test:
             리스트에 노드를 추가하고, primary node를 설정 -> 1번 노드가 primary node
             view change때는 랜덤으로 primary node를 설정
         """
-        for i in range(0, self.count_of_total_nodes + 1):
+        for i in range(0, self.count_of_total_nodes):
             node:Node = Node(self.client_node, 
-                            i, 
+                            i+1, 
                             False, 
                             self.blockchain, 
                             LOCALHOST, 
@@ -42,13 +42,21 @@ class Test:
         
         self.primary_node = PrimaryNode(self.list_of_nodes[0], self.pbft_algorithm)
         self.primary_node.node.is_primary = True
-
-        for i in range(self.count_of_faulty_nodes):
-            random.choice(self.list_of_nodes).is_faulty = True
+        self.primary_node.node.is_faulty = True
         
-        for i in range(1, self.count_of_total_nodes + 1):
-            print(self.list_of_nodes[i].node_id, self.list_of_nodes[i].is_faulty)
+        self.pbft_algorithm.nodes = self.list_of_nodes
 
+    
+    def setup_faulty_nodes(self) -> None:
+        for node in self.list_of_nodes:
+            print(node.node_id, node.is_primary, node.is_faulty)
+            node.primary_node = self.primary_node
+
+        # for i in range(self.count_of_faulty_nodes):
+        #     random.choice(self.list_of_nodes).is_faulty = True
+        
+        
+        
     def initialize_network(self) -> None:
         self.pbft_handler = PBFTHandler(self.blockchain, self.pbft_algorithm, self.client_node, self.list_of_nodes) 
         
@@ -83,6 +91,7 @@ if __name__ == "__main__":
         test = Test(algorithm=PBFT(), count_of_total_nodes=5, count_of_faulty_nodes=1, port=5300, blocksize=10)
         test.setup_client_nodes()
         test.setup_nodes()
+        test.setup_faulty_nodes()
         test.initialize_network()
         test.send_request()
         test.print_blockchain()

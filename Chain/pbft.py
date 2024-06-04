@@ -16,23 +16,34 @@ class PBFT(ConsensusAlgorithm):
         self.count_of_faulty_nodes: int = 0
         self.nodes: List['Node'] = []
         
-        self.timeout_base:float = 3.0
+        self.timeout_base:float = 2.0
         self.count_of_timeout:float = 0.0
         
         self.sequence_number = 0
         self.sent_replies: set = set() 
     
-    
     def set_nodes(self, nodes: List['Node']) -> None:
         self.nodes = nodes
-
-    def check_timeout(self, count_of_timeout, timebase) :
-        time_diff = time.time() - count_of_timeout
-        if time_diff <= timebase:
-            return True
-        else:
-            return False
-
+    
+    def initialize_memory(self, node: 'Node') -> None:
+        node.processed_pre_prepare_messages = {}
+        node.processed_prepare_messages = {}
+        node.processed_commit_messages = {}
+        node.processed_reply_messages = {}
+        node.processed_view_change_messages = {}
+        node.processed_new_view_messages = {}
+        
+        node.received_pre_prepare_messages = []
+        node.received_prepare_messages = []
+        node.received_commit_messages = []
+        
+        node.is_timer_on = False
+        node.timer_start = 0.0
+        
+        node.received_view_change_messages = []
+        node.receive_new_view_messages = []       
+        
+        
     def handle_message(self, message: Dict[str, Any], node: 'Node') -> None:
         if message["stage"] == "PRE-PREPARE":
             node.received_pre_prepare_messages.append({'node_id_to' : node.node_id, 'node_id_from': message['node_id'], 'message': message})
@@ -54,26 +65,21 @@ class PBFT(ConsensusAlgorithm):
             if len(node.received_commit_messages) >= (2 * self.count_of_faulty_nodes + 1) and node.validate_message(message, node.received_commit_messages) is True:
                 self.send_reply_to_client(message, node)
                 
-        # elif stage == "VIEW-CHANGE":
-        #     self.handle_view_change(message, node)
+        elif message["stage"] == "VIEW-CHANGE":
+            node.received_view_change_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
+            node.current_view_number = message.get('new_view')
+            if node.current_view_number == node.node_id:
+                if len(node.received_view_change_messages) >= 2 * self.count_of_faulty_nodes + 1:
+                    self.select_new_primary(node)
+                    self.create_new_view(node)
+        
+        elif message["stage"] == "NEW-VIEW":
+            node.receive_new_view_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
+            if message["node_id"] == node.primary_node.node_id:
+                self.initialize_memory(node)
+                self.conduct_previous_view_stage(node)
 
-    # def request_view_change(self, node_id: int, new_view: int) -> None:
-    #     view_change = ViewChange(node_id)
-    #     view_change.change_view()
-    #     view_change_message = {
-    #         "stage": "VIEW-CHANGE",
-    #         "new_view": new_view,
-    #         "node_id": node_id
-    #     }
-    #     self.view_change_requests.append(view_change)
-    #     self.broadcast_view_change(view_change_message)
-
-    #     time.sleep(self.current_timeout)
-    #     if self.check_view_change_agreement(new_view):
-    #         self.start_new_view(new_view)
-    #     else:
-    #         self.current_timeout *= 2
-
+                
     def pre_prepare(self, request: Dict[str, Any], node: 'Node') -> None:
         if node.is_faulty is True:
             return
@@ -82,7 +88,7 @@ class PBFT(ConsensusAlgorithm):
         request_digest = hashlib.sha256(str(request).encode()).hexdigest()
         pre_prepare_message = {
             "stage": "PRE-PREPARE",
-            # "view": self.current_view,
+            "view": node.current_view_number,
             "seq_num": self.sequence_number,
             "digest": request_digest,
             "data": request,
@@ -101,7 +107,7 @@ class PBFT(ConsensusAlgorithm):
         
         prepare_message= {
             "stage": "PREPARE",
-            # "view": self.current_view,
+            "view": node.current_view_number,
             "seq_num": pre_prepare_message["seq_num"],
             "digest": pre_prepare_message_digest,
             "node_id": node.node_id,
@@ -119,7 +125,7 @@ class PBFT(ConsensusAlgorithm):
         
         commit_message = {
             "stage": "COMMIT",
-            # "view": prepare_message["view"],
+            "view": prepare_message["view"],
             "seq_num": prepare_message["seq_num"],
             "digest": prepare_message_digest,
             "node_id": node.node_id,
@@ -134,7 +140,7 @@ class PBFT(ConsensusAlgorithm):
     def send_reply_to_client(self, commit_message: Dict[str, Any], node: 'Node') -> None:
         reply_message = {
             "stage": "REPLY",
-            # "view": commit_message["view"],
+            "view": commit_message["view"],
             "timestamp": int(time.time()),
             "client_id": node.client_node.client_node_id,
             "result": "Execution Result",
@@ -146,38 +152,46 @@ class PBFT(ConsensusAlgorithm):
         else:
             return
         node.client_node.receive_reply(reply_message, self.count_of_faulty_nodes)
+    
+    def view_change(self, node: 'Node') -> None:
+        view_change_message = {
+            "stage": "VIEW-CHANGE",
+            "new_view": node.current_view_number + 1,
+            "seq_num": node.current_sequence_number,
+            "node_id": node.node_id
+        }
+        node.current_view_number += 1
+        if node.processed_view_change_messages == {}:
+            node.processed_view_change_messages.update({'node_id_from': node.node_id, 
+                                                        'message': view_change_message})
+        else:
+            return
+        node.send_message_to_all(view_change_message)
+    
+    def create_new_view(self, node: 'Node') -> None:
+        new_view_message = {
+            "stage": "NEW-VIEW",
+            "view": node.current_view_number,
+            "node_id": node.node_id
+        }
+        if node.processed_new_view_messages == {}:
+            node.processed_new_view_messages.update({'node_id_from': node.node_id, 
+                                                    'message': new_view_message})
+        node.send_message_to_all(new_view_message)
         
-    # def handle_view_change(self, message: Dict[str, Any], node: 'Node') -> None:
-    #     new_view = message["new_view"]
-    #     if new_view > self.current_view:
-    #         self.view_change_requests.append(ViewChange(node.node_id))
-    #         if self.check_view_change_agreement(new_view):
-    #             self.start_new_view(new_view)
-
-    # def broadcast_view_change(self, view_change_message: Dict[str, Any]) -> None:
-    #     for node in self.nodes:
-    #         node.receive_message(view_change_message)
-
-    # def check_view_change_agreement(self, new_view: int) -> bool:
-    #     count = sum(1 for vc in self.view_change_requests if vc.current_view == new_view)
-    #     return count >= (2 * self.faulty_nodes_count() + 1)
-
-    # def start_new_view(self, new_view: int) -> None:
-    #     self.current_view = new_view
-    #     self.current_timeout = self.timeout_base
-    #     print(f"Starting new view: {new_view}")
-    #     if self.nodes:
-    #         self.primary_node = self.select_new_primary(new_view)
-    #         print(f"New primary selected: Node {self.primary_node.node_id}")
-    #     else:
-    #         print("Error: No nodes available to select a new primary.")
-
-    # def select_new_primary(self, new_view: int) -> 'Node':
-    #     if len(self.nodes) > 0:
-    #         return self.nodes[new_view % len(self.nodes)]
-    #     else:
-    #         raise ValueError("No nodes available to select a new primary.")
-
+    def select_new_primary(self, node: 'Node') -> None:
+        print(f"Node {node.node_id} is selected as a new primary node")
+        original_primary = node.primary_node
+        new_primary = self.nodes[original_primary.node_id]
+        node.primary_node = PrimaryNode(new_primary, self)
+        node.primary_node.node.is_primary = True
+        original_primary.node.is_primary = False
+        
+        for node in self.nodes:
+            print(node.node_id, node.is_primary, node.is_faulty)            
+            
+    def conduct_previous_view_stage(self, node: 'Node') -> None:
+        node.receive_message(node.received_request_messages)
 
 class PBFTHandler:
     def __init__(self, blockchain, consensus, client_node: List['ClientNode'], nodes: List['Node']):
@@ -201,7 +215,6 @@ class PBFTHandler:
 
     def send_request_to_primary(self, request: Dict[str, Any]) -> None:
         self.primary_node.receive_request(request)
-        self.client_node.primary_node = self.primary_node
 
     def initialize_network(self) -> None:
         for node in self.nodes:
@@ -209,14 +222,6 @@ class PBFTHandler:
                 if node.node_id != peer.node_id:
                     node.peers_list.append({"node_id": peer.node_id, "client": Client(peer.host, peer.port)})
 
-    def select_random_primary(self) -> None:
-        original_primary = self.primary_node.node
-        self.primary_node = PrimaryNode(self.nodes[0], self.consensus)
-        self.primary_node.node.is_primary = True
-        original_primary.is_primary = False
-        self.nodes.append(original_primary)
-        self.nodes.remove(self.primary_node.node)
-    
     def stop(self) -> None:
         for node in self.nodes:
             node.stop()
