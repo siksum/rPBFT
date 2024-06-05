@@ -1,62 +1,82 @@
-[Send] Client Node: 0 -> Primary Node: {'stage': 'REQUEST', 'data': 'Transaction Data', 'timestamp': 1717408435, 'client_id': 0}
-[Recieve] Primary Node: 1, content: {'stage': 'REQUEST', 'data': 'Transaction Data', 'timestamp': 1717408435, 'client_id': 0}
-[Recieve] Node: 2, stage: PRE-PREPARE, from: Node 1
-[Recieve] Node: 1, stage: PREPARE, from: Node 2
-[Recieve] Node: 3, stage: PRE-PREPARE, from: Node 1
-[Recieve] Node: 3, stage: PREPARE, from: Node 2
-[Recieve] Node: 4, stage: PRE-PREPARE, from: Node 1
-[Recieve] Node: 4, stage: PREPARE, from: Node 2
+[Send] Client Node: 0 -> Primary Node: {'stage': 'REQUEST', 'data': 'Transaction Data', 'timestamp': 1717487234, 'client_id': 0}
+[Recieve] Node: 1, stage: REQUEST, from: Client 0
+stage: REQUEST, from: Node None
+[Recieve] Node: 3, stage: REQUEST, from: Client 0
+stage: REQUEST, from: Node None
+[Recieve] Node: 4, stage: REQUEST, from: Client 0
+stage: REQUEST, from: Node None
+[Recieve] Node: 5, stage: REQUEST, from: Client 0
+stage: REQUEST, from: Node None
+[Recieve] Node: 1, [Recieve] Node: 2, stage: REQUEST, from: Client 0
+stage: REQUEST, from: Node None
+[Recieve] Node: 4, [Recieve] Node: 5, [Recieve] Node: 3, [Recieve] Node: 1, [Recieve] Node: 2, [Recieve] Node: 5, [Recieve] Node: 1, [Recieve] Node: 2, [Recieve] Node: 3, [Recieve] Primary Node: 1, content: {'stage': 'REQUEST', 'data': 'Transaction Data', 'timestamp': 1717487234, 'client_id': 0}
+[Recieve] Node: 4, [Recieve] Node: 4, stage: VIEW-CHANGE, from: Node 2
+[Recieve] Node: 1, stage: VIEW-CHANGE, from: Node 2
+[Recieve] Node: 3, stage: VIEW-CHANGE, from: Node 2
+[Recieve] Node: 1, stage: VIEW-CHANGE, from: Node 3
+[Recieve] Node: 1, stage: VIEW-CHANGE, from: Node 4
+[Recieve] Node: 5, stage: VIEW-CHANGE, from: Node 2
+[Recieve] Node: 2, stage: VIEW-CHANGE, from: Node 3
+[Recieve] Node: 1, stage: VIEW-CHANGE, from: Node 5
+[Recieve] Node: 2, stage: VIEW-CHANGE, from: Node 4
+[Recieve] Node: 2, stage: VIEW-CHANGE, from: Node 5
+Node 2 is selected as a new primary node
+1 False True
+2 True False
+3 False False
+4 False False
+5 False False
+[Recieve] Node: 3, stage: VIEW-CHANGE, from: Node 5
+[Recieve] Node: 4, stage: VIEW-CHANGE, from: Node 3
+[Recieve] Node: 3, stage: VIEW-CHANGE, from: Node 4
+Node 3 is selected as a new primary node
+1 False True
+2 True False
+3 False False
+4 False False
+5 False False
+[Recieve] Node: 4, stage: VIEW-CHANGE, from: Node 5
+[Recieve] Node: 1, stage: NEW-VIEW, from: Node 2
+[Recieve] Node: 5, stage: VIEW-CHANGE, from: Node 3
+[Recieve] Node: 5, stage: VIEW-CHANGE, from: Node 4
+[Recieve] Node: 2, stage: NEW-VIEW, from: Node 3
+[Recieve] Node: 1, stage: NEW-VIEW, from: Node 3
+[Recieve] Node: 3, stage: NEW-VIEW, from: Node 2
+[Recieve] Node: 5, stage: NEW-VIEW, from: Node 3
+[Recieve] Node: 1, stage: PRE-PREPARE, from: Node 5
+[Recieve] Node: 1, stage: PRE-PREPARE, from: Node 2
+[Recieve] Node: 4, stage: NEW-VIEW, from: Node 3
+[Recieve] Node: 1, stage: PRE-PREPARE, from: Node 3
+[Recieve] Node: 2, stage: PRE-PREPARE, from: Node 5
+[Recieve] Node: 1, stage: PRE-PREPARE, from: Node 4
+[Recieve] Node: 2, stage: PRE-PREPARE, from: Node 4
+[Recieve] Node: 3, stage: PRE-PREPARE, from: Node 4
 [Recieve] Node: 1, stage: PREPARE, from: Node 3
-[Recieve] Node: 5, stage: PRE-PREPARE, from: Node 1
+[Recieve] Node: 5, stage: NEW-VIEW, from: Node 2
+[Recieve] Node: 5, stage: PRE-PREPARE, from: Node 3
+[Recieve] Node: 4, stage: PRE-PREPARE, from: Node 5
+[Recieve] Node: 1, stage: PREPARE, from: Node 4
+[Recieve] Node: 5, stage: PRE-PREPARE, from: Node 4
+[Recieve] Node: 3, stage: PRE-PREPARE, from: Node 5
+[Recieve] Node: 1, stage: PRE-PREPARE, from: Node 5
 [Recieve] Node: 1, stage: PREPARE, from: Node 5
-[Recieve] Node: 6, stage: PREPARE, from: Node 2
-[Recieve] Node: 2, stage: PREPARE, from: Node 3
-[Recieve] Node: 1, [Recieve] Node: 1, stage: PREPARE, from: Node 4
-[Recieve] Node: 5, stage: PREPARE, from: Node 2
-[Recieve] Node: 2, stage: PREPARE, from: Node 4
-[Recieve] Node: 2, stage: COMMIT, from: Node 1
+[Recieve] Node: 1, stage: PREPARE, from: Node 2
+[Recieve] Node: 4, stage: PRE-PREPARE, from: Node 3
 [Recieve] Node: 4, stage: PREPARE, from: Node 3
 [Recieve] Node: 3, stage: PREPARE, from: Node 4
+[Recieve] Node: 3, stage: PRE-PREPARE, from: Node 5
 [Recieve] Node: 3, stage: PREPARE, from: Node 5
-[Recieve] Node: 2, stage: PREPARE, from: Node 5
-[Recieve] Node: 1, stage: COMMIT, from: Node 2
-[Recieve] Node: 6, stage: PRE-PREPARE, from: Node 1
-[Recieve] Node: 3, stage: REQUEST, from: Client 0
-[Recieve] Node: 3, stage: COMMIT, from: Node 2
-[Recieve] Node: 4, stage: REQUEST, from: Client 0
-[Recieve] Node: 1, stage: COMMIT, from: Node 4
-[Recieve] Node: 5, stage: PREPARE, from: Node 4
+[Recieve] Node: 1, stage: COMMIT, from: Node 3
+[Recieve] Node: 2, stage: PREPARE, from: Node 4
+[Recieve] Node: 4, stage: NEW-VIEW, from: Node 2
+[Recieve] Node: 1, stage: PRE-PREPARE, from: Node 4
+[Recieve] Node: 4, stage: COMMIT, from: Node 3
 [Recieve] Node: 5, stage: PREPARE, from: Node 3
-[Recieve] Node: 5, stage: REQUEST, from: Client 0
-[Recieve] Node: 6, stage: PREPARE, from: Node 4
-[Recieve] Node: 6, stage: PREPARE, from: Node 5
-[Recieve] Node: 4, stage: PREPARE, from: Node 5
+[Recieve] Node: 5, stage: PREPARE, from: Node 4
 [Recieve] Node: 1, stage: COMMIT, from: Node 5
-[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717408435, 'client_id': 0, 'result': 'Execution Result', 'node_id': 1}
-Client Node: 0 received 1 replies.
-[Recieve] Node: 2, stage: COMMIT, from: Node 3
-[Recieve] Node: 2, stage: COMMIT, from: Node 5
-[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717408435, 'client_id': 0, 'result': 'Execution Result', 'node_id': 2}
-[Recieve] Node: 4, stage: COMMIT, from: Node 2
-[Recieve] Node: 6, stage: PREPARE, from: Node 3
-[Recieve] Node: 4, stage: COMMIT, from: Node 1
-[Recieve] Node: 5, stage: COMMIT, from: Node 1
+[Recieve] Node: 3, stage: PRE-PREPARE, from: Node 4
+[Recieve] Node: 5, stage: PRE-PREPARE, from: Node 4
 [Recieve] Node: 3, stage: COMMIT, from: Node 5
-[Recieve] Node: 4, stage: COMMIT, from: Node 5
-[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717408435, 'client_id': 0, 'result': 'Execution Result', 'node_id': 4}
-[Recieve] Node: 6, stage: REQUEST, from: Client 0
-[Recieve] Node: 6, stage: COMMIT, from: Node 2
-[Recieve] Node: 5, stage: COMMIT, from: Node 4
-[Recieve] Node: 5, stage: COMMIT, from: Node 2
-[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717408435, 'client_id': 0, 'result': 'Execution Result', 'node_id': 5}
-[Recieve] Node: 6, stage: COMMIT, from: Node 5
+[Recieve] Node: 2, stage: PRE-PREPARE, from: Node 4
 [Recieve] Node: 5, stage: COMMIT, from: Node 3
-[Recieve] Node: 6, stage: COMMIT, from: Node 1
-[Recieve] Node: 3, stage: COMMIT, from: Node 1
-[Recieve] Client Node: 0 received reply: {'stage': 'REPLY', 'timestamp': 1717408435, 'client_id': 0, 'result': 'Execution Result', 'node_id': 3}
-[Recieve] Node: 6, stage: COMMIT, from: Node 4
-[Recieve] Node: 2, stage: COMMIT, from: Node 4
-[Recieve] Node: 6, stage: COMMIT, from: Node 3
-[Recieve] Node: 2, stage: REQUEST, from: Client 0
-[Recieve] Node: 3, stage: COMMIT, from: Node 4
-[Recieve] Node: 6, [Recieve] Node: 5, [Recieve] Node: 1, [Recieve] Node: 2, [Recieve] Node: 3, [Recieve] Node: 5, [Recieve] Node: 6, [Recieve] Node: 1, [Recieve] Node: 3, [Recieve] Node: 6, [Recieve] Node: 1, [Recieve] Node: 2, [Recieve] Node: 3, [Recieve] Node: 4, [Recieve] Node: 5, Block 0 [Hash: b9db7254d5382dc94a6a5036ce1b6638b89c1f6d1147277c70394b9508ef0c4e]
+Block 0 [Hash: 032a2a1f43824289a25cfde7c53c6bbb4acdef0eaef679c845f4108a09b55675]
