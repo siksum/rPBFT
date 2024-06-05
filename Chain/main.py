@@ -61,9 +61,9 @@ class Test:
         self.pbft_handler.initialize_network()
     
     def send_request(self) -> None:
-        self.client_node.send_request(self.pbft_handler, "Transaction Data", int(time.time()))
-        self.pbft_handler.count_of_timeout = time.time()
-        time.sleep(2)
+        self.client_node.send_request(self.pbft_handler, "Transaction Data", int(time.time()))        
+        # 최종 생성된 체인 확인하는 시간
+        time.sleep(3)
         
     def print_blockchain(self) -> None:
         for block in self.blockchain.chain:
