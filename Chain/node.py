@@ -2,15 +2,14 @@ import threading
 import time
 from typing import List, Dict, TYPE_CHECKING, Any
 from blockchain import Blockchain
-from constant import *
 from network import Server
 
 if TYPE_CHECKING:
     from pbft import PBFTHandler, PBFT
     from network import Server, Client
 
-def check_timeout(timer_start, timebase) :
-    time_diff = time.time() - timer_start
+def check_timeout(timer_start: float, timebase: float) :
+    time_diff: float = time.time() - timer_start
     if time_diff > timebase:
         return False
     else:
@@ -56,15 +55,16 @@ class Node:
         self.view_change_timeout_base: float = 2.0
         self.new_view_counter: bool = False
         
+        
     def detect_failure_and_request_view_change(self)-> None:
-        new_view = self.current_view_number + 1
+        new_view: int = self.current_view_number + 1
         self.consensus_algorithm.request_view_change(self.node_id, new_view)
 
-
     
-    def send_message_to_all(self, message) -> None:
+    def send_message_to_all(self, message: Dict[str, Any]) -> None:
         for peer in self.peers_list:
             peer["client"].send_message(str(message))
+     
      
     def view_change_callback(self) -> None:
         """_summary_
@@ -73,7 +73,8 @@ class Node:
         self.consensus_algorithm.view_change(self)
         self.view_change_timer.cancel()
             
-    def receive_message(self, message) -> None:
+            
+    def receive_message(self, message: str) -> None:
         """_summary_
             1. 노드 입장에서 None 메시지 받았을때는 타이머 꺼질때까지 아무것도 안해도 됨.
             2. request 메시지 받으면 타이머 켬.
@@ -84,21 +85,23 @@ class Node:
             return
         
         print(f"[Recieve] Node: {self.node_id}, ", end="")
-        message_dict = eval(message)
+        message_dict: Dict = eval(message)
+        
         if message_dict.get('stage') == "REQUEST":
             if not self.view_change_timer:
-                self.view_change_timer = threading.Timer(self.view_change_timeout_base, lambda: self.view_change_callback())
+                self.view_change_timer: threading = threading.Timer(self.view_change_timeout_base, lambda: self.view_change_callback())
                 self.view_change_timer.start()
                 
             if self.received_request_messages == {}:
-                self.received_request_messages = message_dict
+                self.received_request_messages: Dict[str, Any] = message_dict
                 print(f"stage: {message_dict.get('stage')}, from: Client {message_dict.get('client_id')}")
             else:
                 return
         print(f"stage: {message_dict.get('stage')}, from: Node {message_dict.get('node_id')}")
         self.consensus_algorithm.handle_message(message_dict, self)
     
-    def validate_message(self, request, received_prepare_messages):
+    
+    def validate_message(self, request: Dict[str, Any], received_prepare_messages: List[Dict[str, Any]]):
         for received_prepare_message in received_prepare_messages:
             if (received_prepare_message['message']['seq_num'] == request['seq_num'] and
                     received_prepare_message['message']['digest'] == request['digest']):
@@ -122,13 +125,13 @@ class ClientNode:
         self.primary_node: 'PrimaryNode' = None
         
     def send_request(self, pbft_handler:'PBFTHandler', data: str, timestamp: int):
-        request= {
+        request: Dict[str, Any] = {
             "stage": "REQUEST",
             "data": data,
             "timestamp": timestamp,
             "client_id": self.client_node_id
         }
-        self.request_messages = request
+        self.request_messages: Dict[str, Any] = request
         print(f"[Send] Client Node: {self.client_node_id} -> Primary Node: {self.request_messages}")
         
         for node in self.nodes[1:]:
@@ -136,7 +139,7 @@ class ClientNode:
         pbft_handler.send_request_to_primary(self.request_messages)
 
 
-    def receive_reply(self, reply_message: Dict[str, Any], count_of_faulty_nodes) -> None:
+    def receive_reply(self, reply_message: Dict[str, Any], count_of_faulty_nodes: int) -> None:
         """_summary_
             1. reply를 받은 노드는 타이머를 종료.
             2. reply가 f + 1개 모이면 모든 노드의 타이머를 끔. 끄지 않을 시 reply 전송 이후에 타이머가 트리거되는 흐름 발생.
@@ -160,7 +163,7 @@ class ClientNode:
         else:
             print(f"Client Node: {self.client_node_id} received {self.count_of_replies} replies.")
             
-    def validate_reply(self, reply_message: Dict[str, Any], received_replies) -> None:
+    def validate_reply(self, reply_message: Dict[str, Any], received_replies: List[Dict[str, Any]]) -> None:
         for message_of_stage in received_replies:
             if message_of_stage['digest'] == reply_message['digest']:
                 return True
@@ -171,12 +174,12 @@ class ClientNode:
         return self.request_messages   
 
 class PrimaryNode:
-    def __init__(self, node: Node, pbft: 'PBFT'):
-        self.node = node
+    def __init__(self, node: 'Node', pbft: 'PBFT'):
+        self.node: 'Node' = node
         self.node_id: int = node.node_id
         self.pbft: 'PBFT' = pbft
 
-    def receive_request(self, request):
+    def receive_request(self, request: Dict[str, Any]):
         print(f"[Recieve] Primary Node: {self.node_id}, content: {request}")
         
         if self.node.is_faulty is True:

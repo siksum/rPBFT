@@ -1,13 +1,13 @@
 from typing import List, Dict, Any, TYPE_CHECKING
 import hashlib
 import time
-from view import ViewChange
 from node import PrimaryNode, ClientNode
 from abstract import ConsensusAlgorithm
 from network import Client
 
 if TYPE_CHECKING:
     from node import Node
+    from blockchain import Blockchain
     
 
 class PBFT(ConsensusAlgorithm):
@@ -16,11 +16,11 @@ class PBFT(ConsensusAlgorithm):
         self.count_of_faulty_nodes: int = 0
         self.nodes: List['Node'] = []
         
-        self.sequence_number = 0
+        self.sequence_number: int = 0
         self.sent_replies: set = set() 
     
     def set_nodes(self, nodes: List['Node']) -> None:
-        self.nodes = nodes
+        self.nodes: List['Node'] = nodes
     
     def initialize_memory(self, node: 'Node') -> None:
         node.processed_pre_prepare_messages = {}
@@ -93,7 +93,7 @@ class PBFT(ConsensusAlgorithm):
         
         self.sequence_number += 1   
         request_digest = hashlib.sha256(str(request).encode()).hexdigest()
-        pre_prepare_message = {
+        pre_prepare_message: Dict[str, Any] = {
             "stage": "PRE-PREPARE",
             "view": node.current_view_number,
             "seq_num": self.sequence_number,
@@ -109,10 +109,11 @@ class PBFT(ConsensusAlgorithm):
             return
         node.send_message_to_all(pre_prepare_message)
             
+            
     def prepare(self, pre_prepare_message: Dict[str, Any], node: 'Node') -> None:
         pre_prepare_message_digest = hashlib.sha256(str(pre_prepare_message).encode()).hexdigest()
         
-        prepare_message= {
+        prepare_message: Dict[str, Any] = {
             "stage": "PREPARE",
             "view": node.current_view_number,
             "seq_num": pre_prepare_message["seq_num"],
@@ -126,17 +127,19 @@ class PBFT(ConsensusAlgorithm):
         else:
             return
         node.send_message_to_all(prepare_message)
+           
             
     def commit(self, prepare_message: Dict[str, Any], node: 'Node') -> None:
         prepare_message_digest = hashlib.sha256(str(prepare_message).encode()).hexdigest()
         
-        commit_message = {
+        commit_message: Dict[str, Any] = {
             "stage": "COMMIT",
             "view": prepare_message["view"],
             "seq_num": prepare_message["seq_num"],
             "digest": prepare_message_digest,
             "node_id": node.node_id,
         }
+        
         if node.processed_commit_messages == {}:
             node.processed_commit_messages.update({'node_id_from': node.node_id, 
                                                 'message': commit_message})
@@ -144,8 +147,9 @@ class PBFT(ConsensusAlgorithm):
             return
         node.send_message_to_all(commit_message)
           
+          
     def send_reply_to_client(self, commit_message: Dict[str, Any], node: 'Node') -> None:
-        reply_message = {
+        reply_message: Dict[str, Any] = {
             "stage": "REPLY",
             "view": commit_message["view"],
             "timestamp": int(time.time()),
@@ -153,6 +157,7 @@ class PBFT(ConsensusAlgorithm):
             "result": "Execution Result",
             "node_id": node.node_id
         }
+        
         if node.processed_reply_messages == {}:
             node.processed_reply_messages.update({'node_id_from': node.node_id, 
                                                 'message': reply_message})
@@ -160,13 +165,15 @@ class PBFT(ConsensusAlgorithm):
             return
         node.client_node.receive_reply(reply_message, self.count_of_faulty_nodes)
     
+    
     def view_change(self, node: 'Node') -> None:
-        view_change_message = {
+        view_change_message: Dict[str, Any] = {
             "stage": "VIEW-CHANGE",
             "new_view": node.current_view_number + 1,
             "seq_num": node.current_sequence_number,
             "node_id": node.node_id
         }
+        
         node.current_view_number += 1
         if node.processed_view_change_messages == {}:
             node.processed_view_change_messages.update({'node_id_from': node.node_id, 
@@ -176,27 +183,32 @@ class PBFT(ConsensusAlgorithm):
         print(f"[VIEWCHANGE] Node: {node.node_id} Message: {view_change_message}")
         node.send_message_to_all(view_change_message)
     
+    
     def create_new_view(self, node: 'Node') -> None:
-        new_view_message = {
+        new_view_message: Dict[str, Any] = {
             "stage": "NEW-VIEW",
             "view": node.current_view_number,
             "node_id": node.node_id
         }
+        
         if node.processed_new_view_messages == {}:
             node.processed_new_view_messages.update({'node_id_from': node.node_id, 
                                                     'message': new_view_message})
         node.send_message_to_all(new_view_message)
+       
         
     def select_new_primary(self, node: 'Node') -> None:
         print(f"Node {node.node_id} is selected as a new primary node")
-        original_primary = node.primary_node
-        new_primary = self.nodes[original_primary.node_id]
+        original_primary: 'PrimaryNode' = node.primary_node
+        new_primary: 'Node' = self.nodes[original_primary.node_id]
         node.primary_node = PrimaryNode(new_primary, self)
         node.primary_node.node.is_primary = True
         original_primary.node.is_primary = False
         
+        
     def conduct_previous_view_stage(self, node: 'Node') -> None:
         self.pre_prepare(node.received_request_messages, node)
+        
         
     def cancel_all_view_change_timer(self):
         for node in self.nodes:
@@ -204,19 +216,21 @@ class PBFT(ConsensusAlgorithm):
                 node.view_change_timer.cancel()
                 print(node.view_change_timer)
 
+
 class PBFTHandler:
-    def __init__(self, blockchain, consensus, client_node: List['ClientNode'], nodes: List['Node']):
-        self.blockchain = blockchain
+    def __init__(self, blockchain: 'Blockchain', consensus, client_node: List['ClientNode'], nodes: List['Node']):
+        self.blockchain: 'Blockchain' = blockchain
         self.consensus = consensus
         
         self.nodes: List['Node'] = nodes
-        self.right_nodes = [node for node in nodes if node.is_faulty is False]
-        self.faulty_nodes = [node for node in nodes if node.is_faulty is True]
+        self.right_nodes: List['Node'] = [node for node in nodes if node.is_faulty is False]
+        self.faulty_nodes: List['Node'] = [node for node in nodes if node.is_faulty is True]
         
         self.check_count_of_nodes()
     
         self.client_node: List['ClientNode'] = client_node
         self.primary_node = PrimaryNode(nodes[0], self.consensus)
+        
         
     def check_count_of_nodes(self) -> None:
         if self.faulty_nodes is None:
@@ -224,14 +238,17 @@ class PBFTHandler:
         else:
             assert len(self.nodes) >= len(self.faulty_nodes) * 3 + 1, "Count of nodes should be greater than 3f + 1"
 
+
     def send_request_to_primary(self, request: Dict[str, Any]) -> None:
         self.primary_node.receive_request(request)
+
 
     def initialize_network(self) -> None:
         for node in self.nodes:
             for peer in self.nodes:
                 if node.node_id != peer.node_id:
                     node.peers_list.append({"node_id": peer.node_id, "client": Client(peer.host, peer.port)})
+    
     
     def stop(self) -> None:
         for node in self.nodes:

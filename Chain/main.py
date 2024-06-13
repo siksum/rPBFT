@@ -1,10 +1,11 @@
 from blockchain import Blockchain
 from pbft import PBFT, PBFTHandler
 from node import Node, ClientNode, PrimaryNode
-from constant import *
 import time
 from typing import List
 import random
+
+LOCALHOST = "localhost"
 
 class Test:
     def __init__(self, algorithm, count_of_total_nodes:int, count_of_faulty_nodes:int, port:int, blocksize:int):
@@ -23,7 +24,7 @@ class Test:
             클라이언트 노드를 설정 -> 0번 노드가 클라이언트 노드
         """
         client_node = ClientNode(0, self.blockchain, nodes=self.list_of_nodes, port=self.port)
-        self.client_node = client_node
+        self.client_node: ClientNode = client_node
 
     def setup_nodes(self)-> None:
         """_summary_

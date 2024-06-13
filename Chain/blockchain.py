@@ -33,7 +33,7 @@ class Blockchain:
         current_block_hash: str = self.calculate_hash(index, previous_hash, timestamp, previous_block.data, previous_block.current_block_hash)
         return Block(index, previous_hash, timestamp, data, current_block_hash)
 
-    def add_block_to_blockchain(self, data:Dict[str, Any])-> List[Block]:
+    def add_block_to_blockchain(self, data: Dict[str, Any])-> List[Block]:
         previous_block: Block = self.get_latest_block()
         new_block: Block = self.create_new_block(previous_block, data)
         self.chain.append(new_block)
