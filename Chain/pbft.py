@@ -221,35 +221,22 @@ class PBFTHandler:
     def __init__(self, blockchain: 'Blockchain', consensus, client_node: List['ClientNode'], nodes: List['Node']):
         self.blockchain: 'Blockchain' = blockchain
         self.consensus = consensus
-        
-        self.nodes: List['Node'] = nodes
-        self.right_nodes: List['Node'] = [node for node in nodes if node.is_faulty is False]
-        self.faulty_nodes: List['Node'] = [node for node in nodes if node.is_faulty is True]
-        
-        self.check_count_of_nodes()
-    
+        self.list_of_total_nodes: List['Node'] = nodes
+        self.list_of_normal_nodes: List['Node'] = [node for node in nodes if node.is_faulty is False]
+        self.list_of_faulty_nodes: List['Node'] = [node for node in nodes if node.is_faulty is True]
         self.client_node: List['ClientNode'] = client_node
         self.primary_node = PrimaryNode(nodes[0], self.consensus)
-        
-        
-    def check_count_of_nodes(self) -> None:
-        if self.faulty_nodes is None:
-            assert len(self.nodes) >= 3, "Count of nodes should be greater than 3"
-        else:
-            assert len(self.nodes) >= len(self.faulty_nodes) * 3 + 1, "Count of nodes should be greater than 3f + 1"
-
 
     def send_request_to_primary(self, request: Dict[str, Any]) -> None:
         self.primary_node.receive_request(request)
 
 
     def initialize_network(self) -> None:
-        for node in self.nodes:
-            for peer in self.nodes:
+        for node in self.list_of_total_nodes:
+            for peer in self.list_of_total_nodes:
                 if node.node_id != peer.node_id:
                     node.peers_list.append({"node_id": peer.node_id, "client": Client(peer.host, peer.port)})
     
-    
     def stop(self) -> None:
-        for node in self.nodes:
+        for node in self.list_of_total_nodes:
             node.stop()

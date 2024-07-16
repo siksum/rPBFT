@@ -6,8 +6,7 @@ from typing import TYPE_CHECKING, List
 if TYPE_CHECKING:
     from node import Node
     
-
-
+    
 class Server:
     def __init__(self, host: str, port: int, node: 'Node'):
         self.host: str = host
