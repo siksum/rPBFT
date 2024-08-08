@@ -1,6 +1,7 @@
 import socket
 import threading
 import json
+import logging
 from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
@@ -18,6 +19,7 @@ class Server:
         self.server_socket.listen(5)
         self.clients: List = []
         self.running: bool = True
+        self.clients_lock = threading.Lock()
 
     def start(self) -> None:
         threading.Thread(target=self.accept_clients).start()
@@ -32,30 +34,44 @@ class Server:
                 break
 
     def handle_client(self, client_socket) -> None:
-        while self.running:
-            try:
+        try:
+            while self.running:
                 message_bytes = client_socket.recv(1024)
                 if message_bytes:
-                    message: json = json.loads(message_bytes.decode('utf-8'))
+                    message = json.loads(message_bytes.decode('utf-8'))
                     self.node.receive_message(message)
                 else:
-                    self.node.receive_message(message)
-            except:
-                break
-        client_socket.close()
+                    break  # 클라이언트가 연결을 종료한 경우
+        except (BrokenPipeError, ConnectionResetError) as e:
+            logging.error(f"Socket error: {e}")
+        except json.JSONDecodeError as e:
+            logging.error(f"JSON decoding error: {e}")
+        except Exception as e:
+            logging.error(f"Unexpected error: {e}")
+        finally:
+            try:
+                if client_socket.fileno() != -1:
+                    client_socket.close()
+            except Exception as e:
+                logging.error(f"Error closing client socket: {e}")
+
 
     def broadcast(self, message: str) -> None:
         message_bytes: json = json.dumps(message).encode('utf-8')
-        for client in self.clients:
-            try:
-                client.sendall(message_bytes)
-            except:
-                self.clients.remove(client)
+        with self.clients_lock:
+            for client in self.clients:
+                try:
+                    client.sendall(message_bytes)
+                except:
+                    self.clients.remove(client)
 
     def stop(self) -> None:
         self.running: bool = False
         for client in self.clients:
-            client.close()
+            try:
+                client.close()
+            except (BrokenPipeError, IOError) as e:
+                print(f"소켓 오류 발생: {e}")
         self.server_socket.close()
 
 
@@ -67,8 +83,16 @@ class Client:
         self.client_socket.connect((self.host, self.port))
 
     def send_message(self, message: str) -> None:
-        message_bytes: json = json.dumps(message).encode('utf-8')
-        self.client_socket.sendall(message_bytes)
+        if self.client_socket.fileno() == -1:
+            logging.error("Socket is invalid.")
+            return
+        try:
+            message_bytes = json.dumps(message).encode('utf-8')
+            self.client_socket.sendall(message_bytes)
+        except (BrokenPipeError, IOError) as e:
+            logging.error(f"Socket error: {e}")
+        except Exception as e:
+            logging.error(f"Unexpected error: {e}")
 
     def close(self) -> None:
         self.client_socket.close()

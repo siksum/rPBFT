@@ -8,6 +8,7 @@ import time
 from typing import List
 import random
 import argparse
+import logging
 
 LOCALHOST = "localhost"
 
@@ -171,9 +172,18 @@ if __name__ == "__main__":
             rpbft_test.setup_rpbft_nodes(generate_faulty_nodes.list_of_random_failures)
             rpbft_test.initialize_network()
             rpbft_test.send_request()
+            rpbft_test.print_blockchain()
+            rpbft_test.send_request()
             
     finally:
-        if hasattr(pbft_test, 'pbft_handler'):
-            pbft_test.pbft_handler.stop()
-        if hasattr(rpbft_test, 'pbft_handler'):
-            rpbft_test.pbft_handler.stop()
+        if hasattr(pbft_test, 'pbft_handler') and pbft_test.pbft_handler is not None:
+            try:
+                pbft_test.pbft_handler.stop()
+            except Exception as e:
+                logging.error(f"Error stopping PBFT handler: {e}")
+        if hasattr(rpbft_test, 'pbft_handler') and rpbft_test.pbft_handler is not None:
+            try:
+                rpbft_test.pbft_handler.stop()
+            except Exception as e:
+                logging.error(f"Error stopping rPBFT handler: {e}")
+

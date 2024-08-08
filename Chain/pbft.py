@@ -108,11 +108,10 @@ class PBFT(ConsensusAlgorithm):
                                                         'message': pre_prepare_message})
         else:
             return
-        node.send_message_to_all(pre_prepare_message)
+        node.send_message_to_peers(pre_prepare_message, node.peers_list)
             
             
     def prepare(self, pre_prepare_message: Dict[str, Any], node: 'Node') -> None:
-        
         prepare_message: Dict[str, Any] = {
             "stage": "PREPARE",
             "view": node.current_view_number,
@@ -126,11 +125,10 @@ class PBFT(ConsensusAlgorithm):
                                                     'message': prepare_message})
         else:
             return
-        node.send_message_to_all(prepare_message)
+        node.send_message_to_peers(prepare_message, node.peers_list)
            
             
     def commit(self, prepare_message: Dict[str, Any], node: 'Node') -> None:
-        
         commit_message: Dict[str, Any] = {
             "stage": "COMMIT",
             "view": prepare_message["view"],
@@ -144,11 +142,10 @@ class PBFT(ConsensusAlgorithm):
                                                 'message': commit_message})
         else:
             return
-        node.send_message_to_all(commit_message)
+        node.send_message_to_peers(commit_message, node.peers_list)
           
           
     def send_reply_to_client(self, commit_message: Dict[str, Any], node: 'Node') -> None:
-        
         reply_message: Dict[str, Any] = {
             "stage": "REPLY",
             "view": commit_message["view"],
@@ -181,7 +178,7 @@ class PBFT(ConsensusAlgorithm):
         else:
             return
         print(f"[VIEWCHANGE] Node: {node.node_id} Message: {view_change_message}")
-        node.send_message_to_all(view_change_message)
+        node.send_message_to_peers(view_change_message, node.peers_list)
     
     
     def create_new_view(self, node: 'Node') -> None:
@@ -194,7 +191,7 @@ class PBFT(ConsensusAlgorithm):
         if node.processed_new_view_messages == {}:
             node.processed_new_view_messages.update({'node_id_from': node.node_id, 
                                                     'message': new_view_message})
-        node.send_message_to_all(new_view_message)
+        node.send_message_to_peers(new_view_message, node.peers_list)
        
         
     def select_new_primary(self, node: 'Node') -> None:

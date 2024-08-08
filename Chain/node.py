@@ -40,47 +40,40 @@ class Node:
         self.processed_commit_messages: Dict[str, Any] = {}
         self.processed_reply_messages: Dict[str, Any] = {}
         self.processed_fault_data: Dict[str, Any] = {}
+        self.processed_view_change_messages: Dict[str, Any] = {}
+        self.processed_new_view_messages: Dict[str, Any] = {}
         
         self.received_request_messages: Dict[str, Any] = {}
         self.received_pre_prepare_messages: List[Dict[str, Any]] = []
         self.received_prepare_messages: List[Dict[str, Any]] = []
         self.received_commit_messages: List[Dict[str, Any]] = []
         self.received_fault_data: List[Dict[str, Any]] = []
+        self.received_view_change_messages: List[Dict[str, Any]] = []
+        self.receive_new_view_messages: List[Dict[str, Any]] = []
         
         self.count_of_fault_data: int = 0
         self.sum_of_priorities: List[int] = []
+        self.hasFaultyData: bool = False
         
         self.current_view_number: int = 1
         self.current_sequence_number: int = 0
-
-        self.processed_view_change_messages: Dict[str, Any] = {}
-        self.processed_new_view_messages: Dict[str, Any] = {}
-        
-        self.received_view_change_messages: List[Dict[str, Any]] = []
-        self.receive_new_view_messages: List[Dict[str, Any]] = []
+        self.current_block_round: int = self.blockchain.block_round
         
         self.view_change_timer: threading.Timer = None
         self.view_change_timeout_base: float = 2.0
         self.new_view_counter: bool = False
         
+        
     def detect_failure_and_request_view_change(self)-> None:
         new_view: int = self.current_view_number + 1
         self.consensus_algorithm.request_view_change(self.node_id, new_view)
     
-    def send_message_to_all(self, message: Dict[str, Any]) -> None:
-        for peer in self.peers_list:
+    
+    def send_message_to_peers(self, message: Dict[str, Any], peers_list) -> None:
+        for peer in peers_list:
             peer["client"].send_message(str(message))
     
-    def send_message_to_particular_node(self, message: Dict[str, Any], count: int, node_id: int) -> None:
-        start_index = max(0, node_id - count)
-        end_index = min(len(self.peers_list), node_id + count + 1)
-        
-        sub_peers_list = self.peers_list[start_index:end_index]
-        selected_peers = random.sample(sub_peers_list, count)
-        
-        for peer in selected_peers:
-            peer["client"].send_message(str(message))
-     
+                        
     def view_change_callback(self) -> None:
         """_summary_
             view change를 실행하고, 그와 동시에 타이머를 끔.
@@ -100,6 +93,7 @@ class Node:
         
         print(f"[Recieve] Node: {self.node_id}, ", end="")
         message_dict: Dict = eval(message)
+        print(f"content: {message_dict}")
         
         if message_dict.get('stage') == "REQUEST":
             if not self.view_change_timer:
@@ -108,10 +102,11 @@ class Node:
                 
             if self.received_request_messages == {}:
                 self.received_request_messages: Dict[str, Any] = message_dict
-                print(f"stage: {message_dict.get('stage')}, from: Client {message_dict.get('client_id')}")
+                # print(f"stage: {message_dict.get('stage')}, from: Client {message_dict.get('client_id')}")
             else:
                 return
-        print(f"stage: {message_dict.get('stage')}, from: Node {message_dict.get('node_id')}")
+        # else:
+        # print(f"stage: {message_dict.get('stage')}, from: Node {message_dict.get('node_id')}")
         
         self.consensus_algorithm.handle_message(message_dict, self)
     
@@ -148,8 +143,8 @@ class ClientNode:
         self.request_messages: Dict[str, Any] = request
         print(f"[Send] Client Node: {self.client_node_id} -> Primary Node: {self.request_messages}")
         
-        for node in self.nodes[1:]:
-            node.send_message_to_all(self.request_messages)
+        # for node in self.nodes[1:]:
+        #     node.send_message_to_all(self.request_messages)
         pbft_handler.send_request_to_primary(self.request_messages)
 
     def receive_reply(self, reply_message: Dict[str, Any], count_of_faulty_nodes: int) -> None:
@@ -205,7 +200,7 @@ class PrimaryNode:
         print(f"[Recieve] Primary Node: {self.node_id}, content: {request}")
         
         if self.node.is_faulty is True:
-            self.node.send_message_to_all(None)
+            self.node.send_message_to_peers(None, self.node.peers_list)
         else:
             self.node.received_request_messages['node_id_to'] = self.node_id
             self.node.received_request_messages['node_id_from'] = request['client_id']

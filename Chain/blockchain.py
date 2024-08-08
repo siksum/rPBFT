@@ -11,6 +11,7 @@ class Blockchain:
         self.chain: List[Block] = [self.create_genesis_block()]
         self.consensus= consensus
         self.blocksize: int = blocksize
+        self.block_round: int = 1
 
     def create_genesis_block(self)-> Block:
         genesis_data: str = "Genesis Block"
@@ -26,6 +27,7 @@ class Blockchain:
     def get_latest_block(self)-> Block: 
         return self.chain[-1]
     
+
     def create_new_block(self, previous_block: Block, data: Dict[str, Any]) -> Block:
         index: int = previous_block.index + 1
         timestamp: int = int(time.time())
@@ -37,6 +39,7 @@ class Blockchain:
         previous_block: Block = self.get_latest_block()
         new_block: Block = self.create_new_block(previous_block, data)
         self.chain.append(new_block)
+        self.block_round = new_block.index // self.blocksize
 
     def is_valid_block(self, block: Block) -> bool:
         previous_block: Block = self.chain[-2]
