@@ -3,9 +3,11 @@ import time
 from typing import List, Dict, TYPE_CHECKING, Any
 from blockchain import Blockchain
 from network import Server
+import random
 
 if TYPE_CHECKING:
     from pbft import PBFTHandler, PBFT
+    from rPBFT.rPBFT import rPBFT
     from network import Server, Client
 
 def check_timeout(timer_start: float, timebase: float) :
@@ -36,11 +38,16 @@ class Node:
         self.processed_prepare_messages: Dict[str, Any] = {}
         self.processed_commit_messages: Dict[str, Any] = {}
         self.processed_reply_messages: Dict[str, Any] = {}
+        self.processed_fault_data: Dict[str, Any] = {}
         
         self.received_request_messages: Dict[str, Any] = {}
         self.received_pre_prepare_messages: List[Dict[str, Any]] = []
         self.received_prepare_messages: List[Dict[str, Any]] = []
         self.received_commit_messages: List[Dict[str, Any]] = []
+        self.received_fault_data: List[Dict[str, Any]] = []
+        
+        self.count_of_fault_data: int = 0
+        self.sum_of_priorities: List[int] = []
         
         self.current_view_number: int = 1
         self.current_sequence_number: int = 0
@@ -55,16 +62,23 @@ class Node:
         self.view_change_timeout_base: float = 2.0
         self.new_view_counter: bool = False
         
-        
     def detect_failure_and_request_view_change(self)-> None:
         new_view: int = self.current_view_number + 1
         self.consensus_algorithm.request_view_change(self.node_id, new_view)
-
     
     def send_message_to_all(self, message: Dict[str, Any]) -> None:
         for peer in self.peers_list:
             peer["client"].send_message(str(message))
-     
+    
+    def send_message_to_particular_node(self, message: Dict[str, Any], count: int, node_id: int) -> None:
+        start_index = max(0, node_id - count)
+        end_index = min(len(self.peers_list), node_id + count + 1)
+        
+        sub_peers_list = self.peers_list[start_index:end_index]
+        selected_peers = random.sample(sub_peers_list, count)
+        
+        for peer in selected_peers:
+            peer["client"].send_message(str(message))
      
     def view_change_callback(self) -> None:
         """_summary_
@@ -72,7 +86,6 @@ class Node:
         """
         self.consensus_algorithm.view_change(self)
         self.view_change_timer.cancel()
-            
             
     def receive_message(self, message: str) -> None:
         """_summary_
@@ -98,6 +111,7 @@ class Node:
             else:
                 return
         print(f"stage: {message_dict.get('stage')}, from: Node {message_dict.get('node_id')}")
+        
         self.consensus_algorithm.handle_message(message_dict, self)
     
     
@@ -123,6 +137,7 @@ class ClientNode:
         self.count_of_replies: int = 0
         self.nodes: List['Node'] = nodes
         self.primary_node: 'PrimaryNode' = None
+        self.generate_new_block: bool = False
         
     def send_request(self, pbft_handler:'PBFTHandler', data: str, timestamp: int):
         request: Dict[str, Any] = {
@@ -138,7 +153,6 @@ class ClientNode:
             node.send_message_to_all(self.request_messages)
         pbft_handler.send_request_to_primary(self.request_messages)
 
-
     def receive_reply(self, reply_message: Dict[str, Any], count_of_faulty_nodes: int) -> None:
         """_summary_
             1. reply를 받은 노드는 타이머를 종료.
@@ -151,21 +165,28 @@ class ClientNode:
         self.received_replies.append(reply_message)
         print(f"[Recieve] Client Node: {self.client_node_id} received reply: {reply_message}")
         
-        if self.count_of_replies >= count_of_faulty_nodes + 1:
+        # print(self.received_replies)
+        
+        if self.count_of_replies >= count_of_faulty_nodes + 1 and self.generate_new_block is True:
+            print("########## Client Node: ", self.client_node_id, " received enough replies. #########")
             for node in self.nodes:
                 if node.view_change_timer:
                     node.view_change_timer.cancel()    
-            
+                
             if self.validate_reply(reply_message, self.received_replies) is True:
                 self.blockchain.add_block_to_blockchain(reply_message)
-                print(f"Client Node added block: {reply_message}")
+                print(f"[ADD BLOCK] Client Node added block: {reply_message}")
+                self.generate_new_block = False
                 return
+            
         else:
             print(f"Client Node: {self.client_node_id} received {self.count_of_replies} replies.")
+            self.generate_new_block = True
             
     def validate_reply(self, reply_message: Dict[str, Any], received_replies: List[Dict[str, Any]]) -> None:
         for message_of_stage in received_replies:
             if message_of_stage['digest'] == reply_message['digest']:
+                print(f"Client Node: {self.client_node_id} validated reply: {reply_message}")
                 return True
         return False
     
@@ -174,10 +195,10 @@ class ClientNode:
         return self.request_messages   
 
 class PrimaryNode:
-    def __init__(self, node: 'Node', pbft: 'PBFT'):
+    def __init__(self, node: 'Node', pbft_algorithm):
         self.node: 'Node' = node
         self.node_id: int = node.node_id
-        self.pbft: 'PBFT' = pbft
+        self.pbft_algorithm = pbft_algorithm
 
     def receive_request(self, request: Dict[str, Any]):
         print(f"[Recieve] Primary Node: {self.node_id}, content: {request}")
@@ -189,7 +210,7 @@ class PrimaryNode:
             self.node.received_request_messages['node_id_from'] = request['client_id']
             self.node.received_request_messages['message'] = request
             
-            self.pbft.pre_prepare(request, self.node)
+            self.pbft_algorithm.pre_prepare(request, self.node)
         
         
     # def call_pre_prepare(self, request):

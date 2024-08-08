@@ -93,6 +93,8 @@ class PBFT(ConsensusAlgorithm):
         
         self.sequence_number += 1   
         request_digest = hashlib.sha256(str(request).encode()).hexdigest()
+        # debug
+        print("########### request:", request)
         pre_prepare_message: Dict[str, Any] = {
             "stage": "PRE-PREPARE",
             "view": node.current_view_number,
@@ -149,13 +151,16 @@ class PBFT(ConsensusAlgorithm):
           
           
     def send_reply_to_client(self, commit_message: Dict[str, Any], node: 'Node') -> None:
+        commit_message_digest = hashlib.sha256(str(commit_message).encode()).hexdigest()
+        
         reply_message: Dict[str, Any] = {
             "stage": "REPLY",
             "view": commit_message["view"],
             "timestamp": int(time.time()),
             "client_id": node.client_node.client_node_id,
             "result": "Execution Result",
-            "node_id": node.node_id
+            "node_id": node.node_id,
+            "digest": commit_message_digest
         }
         
         if node.processed_reply_messages == {}:
@@ -218,18 +223,17 @@ class PBFT(ConsensusAlgorithm):
 
 
 class PBFTHandler:
-    def __init__(self, blockchain: 'Blockchain', consensus, client_node: List['ClientNode'], nodes: List['Node']):
+    def __init__(self, blockchain: 'Blockchain', pbft_algorithm, client_node: List['ClientNode'], nodes: List['Node']):
         self.blockchain: 'Blockchain' = blockchain
-        self.consensus = consensus
+        self.pbft_algorithm = pbft_algorithm
         self.list_of_total_nodes: List['Node'] = nodes
         self.list_of_normal_nodes: List['Node'] = [node for node in nodes if node.is_faulty is False]
         self.list_of_faulty_nodes: List['Node'] = [node for node in nodes if node.is_faulty is True]
         self.client_node: List['ClientNode'] = client_node
-        self.primary_node = PrimaryNode(nodes[0], self.consensus)
+        self.primary_node = PrimaryNode(nodes[0], self.pbft_algorithm)
 
     def send_request_to_primary(self, request: Dict[str, Any]) -> None:
         self.primary_node.receive_request(request)
-
 
     def initialize_network(self) -> None:
         for node in self.list_of_total_nodes:
