@@ -123,13 +123,11 @@ class rPBFT():
         node.send_message_to_all(pre_prepare_message)
             
     def prepare(self, pre_prepare_message: Dict[str, Any], node: 'Node') -> None:
-        pre_prepare_message_digest = hashlib.sha256(str(pre_prepare_message).encode()).hexdigest()
-        
         prepare_message: Dict[str, Any] = {
             "stage": "PREPARE",
             "view": node.current_view_number,
             "seq_num": pre_prepare_message["seq_num"],
-            "digest": pre_prepare_message_digest,
+            "digest": pre_prepare_message["digest"],
             "node_id": node.node_id,
         }
         
@@ -142,13 +140,11 @@ class rPBFT():
         
             
     def commit(self, prepare_message: Dict[str, Any], node: 'Node') -> None:
-        prepare_message_digest = hashlib.sha256(str(prepare_message).encode()).hexdigest()
-        
         commit_message: Dict[str, Any] = {
             "stage": "COMMIT",
             "view": prepare_message["view"],
             "seq_num": prepare_message["seq_num"],
-            "digest": prepare_message_digest,
+            "digest": prepare_message["digest"],
             "node_id": node.node_id,
         }
         
@@ -161,16 +157,13 @@ class rPBFT():
         
         
     def send_reply_to_client(self, commit_message: Dict[str, Any], node: 'Node') -> None:
-        commit_message_digest = hashlib.sha256(str(commit_message).encode()).hexdigest()
-        
         reply_message: Dict[str, Any] = {
             "stage": "REPLY",
             "view": commit_message["view"],
             "timestamp": int(time.time()),
             "client_id": node.client_node.client_node_id,
             "result": "Execution Result",
-            "node_id": node.node_id,
-            "digest": commit_message_digest
+            "digest": commit_message["digest"]
         }
         
         if node.processed_reply_messages == {}:

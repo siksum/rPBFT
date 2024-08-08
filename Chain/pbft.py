@@ -93,8 +93,7 @@ class PBFT(ConsensusAlgorithm):
         
         self.sequence_number += 1   
         request_digest = hashlib.sha256(str(request).encode()).hexdigest()
-        # debug
-        print("########### request:", request)
+
         pre_prepare_message: Dict[str, Any] = {
             "stage": "PRE-PREPARE",
             "view": node.current_view_number,
@@ -113,13 +112,12 @@ class PBFT(ConsensusAlgorithm):
             
             
     def prepare(self, pre_prepare_message: Dict[str, Any], node: 'Node') -> None:
-        pre_prepare_message_digest = hashlib.sha256(str(pre_prepare_message).encode()).hexdigest()
         
         prepare_message: Dict[str, Any] = {
             "stage": "PREPARE",
             "view": node.current_view_number,
             "seq_num": pre_prepare_message["seq_num"],
-            "digest": pre_prepare_message_digest,
+            "digest": pre_prepare_message["digest"],
             "node_id": node.node_id,
         }
         
@@ -132,13 +130,12 @@ class PBFT(ConsensusAlgorithm):
            
             
     def commit(self, prepare_message: Dict[str, Any], node: 'Node') -> None:
-        prepare_message_digest = hashlib.sha256(str(prepare_message).encode()).hexdigest()
         
         commit_message: Dict[str, Any] = {
             "stage": "COMMIT",
             "view": prepare_message["view"],
             "seq_num": prepare_message["seq_num"],
-            "digest": prepare_message_digest,
+            "digest": prepare_message["digest"],
             "node_id": node.node_id,
         }
         
@@ -151,7 +148,6 @@ class PBFT(ConsensusAlgorithm):
           
           
     def send_reply_to_client(self, commit_message: Dict[str, Any], node: 'Node') -> None:
-        commit_message_digest = hashlib.sha256(str(commit_message).encode()).hexdigest()
         
         reply_message: Dict[str, Any] = {
             "stage": "REPLY",
@@ -159,8 +155,7 @@ class PBFT(ConsensusAlgorithm):
             "timestamp": int(time.time()),
             "client_id": node.client_node.client_node_id,
             "result": "Execution Result",
-            "node_id": node.node_id,
-            "digest": commit_message_digest
+            "digest": commit_message["digest"]
         }
         
         if node.processed_reply_messages == {}:
@@ -210,10 +205,8 @@ class PBFT(ConsensusAlgorithm):
         node.primary_node.node.is_primary = True
         original_primary.node.is_primary = False
         
-        
     def conduct_previous_view_stage(self, node: 'Node') -> None:
         self.pre_prepare(node.received_request_messages, node)
-        
         
     def cancel_all_view_change_timer(self):
         for node in self.nodes:

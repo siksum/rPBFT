@@ -4,6 +4,7 @@ from typing import List, Dict, TYPE_CHECKING, Any
 from blockchain import Blockchain
 from network import Server
 import random
+import hashlib
 
 if TYPE_CHECKING:
     from pbft import PBFTHandler, PBFT
@@ -133,11 +134,9 @@ class ClientNode:
         self.blockchain: 'Blockchain' = blockchain
         self.port: int = port
         self.request_messages: Dict[str, Any] = {}
-        self.received_replies: List[Dict[str, Any]] = []
         self.count_of_replies: int = 0
         self.nodes: List['Node'] = nodes
         self.primary_node: 'PrimaryNode' = None
-        self.generate_new_block: bool = False
         
     def send_request(self, pbft_handler:'PBFTHandler', data: str, timestamp: int):
         request: Dict[str, Any] = {
@@ -161,34 +160,36 @@ class ClientNode:
         """
         if self.nodes[self.client_node_id].view_change_timer:
             self.nodes[self.client_node_id].view_change_timer.cancel()
-        self.count_of_replies += 1
-        self.received_replies.append(reply_message)
+
         print(f"[Recieve] Client Node: {self.client_node_id} received reply: {reply_message}")
         
-        # print(self.received_replies)
+        if self.validate_reply(reply_message) is True:
+            self.count_of_replies += 1
         
-        if self.count_of_replies >= count_of_faulty_nodes + 1 and self.generate_new_block is True:
-            print("########## Client Node: ", self.client_node_id, " received enough replies. #########")
+        if self.count_of_replies >= count_of_faulty_nodes + 1:
             for node in self.nodes:
                 if node.view_change_timer:
                     node.view_change_timer.cancel()    
-                
-            if self.validate_reply(reply_message, self.received_replies) is True:
-                self.blockchain.add_block_to_blockchain(reply_message)
-                print(f"[ADD BLOCK] Client Node added block: {reply_message}")
-                self.generate_new_block = False
+            
+            if self.blockchain.chain[-1].data == reply_message:
                 return
+                
+            self.blockchain.add_block_to_blockchain(reply_message)
+            print(f"[ADD BLOCK] Client Node added block: {reply_message}")
+            return
             
         else:
             print(f"Client Node: {self.client_node_id} received {self.count_of_replies} replies.")
-            self.generate_new_block = True
             
-    def validate_reply(self, reply_message: Dict[str, Any], received_replies: List[Dict[str, Any]]) -> None:
-        for message_of_stage in received_replies:
-            if message_of_stage['digest'] == reply_message['digest']:
-                print(f"Client Node: {self.client_node_id} validated reply: {reply_message}")
-                return True
-        return False
+    def validate_reply(self, reply_message: Dict[str, Any]) -> None:
+        #reply 메시지와 request 메시지의 digest 같은지 비교 -> reply digest는 request digest이기 때문
+        request_digest = hashlib.sha256(str(self.request_messages).encode()).hexdigest()
+        
+        if request_digest == reply_message['digest']:
+            print(f"Client Node: {self.client_node_id} validated reply: {reply_message}")
+            return True
+        else:
+            return False
     
     @property
     def request(self):
