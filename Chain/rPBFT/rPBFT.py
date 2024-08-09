@@ -3,7 +3,7 @@ from node import PrimaryNode, ClientNode
 from pbft import PBFT, PBFTHandler
 import time
 import hashlib
-import random
+from utils import groupby_sorted
 
 if TYPE_CHECKING:
     from node import Node
@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 class rPBFT():
     def __init__(self) -> None:
         self.client_node: 'ClientNode' = None
+        self.primary_node: 'PrimaryNode' = None
         self.count_of_faulty_nodes: int = 0
         self.nodes: List['Node'] = []
         self.nodes_committee: List[Dict[str, Any]] = []
@@ -44,27 +45,35 @@ class rPBFT():
         
     def handle_message(self, message: Dict[str, Any], node: 'Node') -> None:
         if message["stage"] == "PRE-PREPARE":
-            node.received_pre_prepare_messages.append({'node_id_to' : node.node_id, 'node_id_from': message['node_id'], 'message': message})
+            # node.received_pre_prepare_messages.append({'node_id_to' : node.node_id, 'node_id_from': message['node_id'], 'message': message})
+            # print(node.received_prepare_messages)
+            
             if node.is_faulty is True:
                 return
             self.prepare(message, node)
             
         elif message["stage"] == "PREPARE":
             node.received_prepare_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
+            sorted_by_seqnum = groupby_sorted(node.received_prepare_messages)
+            equal_seqnum = sorted_by_seqnum.get(message['seq_num'])
+            
             if node.is_faulty is True:
                 return
-            if len(node.received_prepare_messages) >= 2 * self.count_of_faulty_nodes and node.validate_message(message, node.received_prepare_messages) is True:
+            if len(equal_seqnum) >= 2 * self.count_of_faulty_nodes and node.validate_message(message, equal_seqnum) is True:
                 self.commit(message, node)
         
         # COMMIT, VIEW-CHANGE, NEW-VIEW 메시지를 받은 노드는 더이상 타이머가 필요없으므로 종료시킴.
         elif message["stage"] == "COMMIT":
             if node.view_change_timer:
                 node.view_change_timer.cancel()
-                
+            
             node.received_commit_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
+            sorted_by_seqnum = groupby_sorted(node.received_commit_messages)
+            equal_seqnum = sorted_by_seqnum.get(message['seq_num'])
+            
             if node.is_faulty is True:
                 return
-            if len(node.received_commit_messages) >= (2 * self.count_of_faulty_nodes + 1) and node.validate_message(message, node.received_commit_messages) is True:
+            if len(equal_seqnum) >= (2 * self.count_of_faulty_nodes + 1) and node.validate_message(message, equal_seqnum) is True:
                 self.send_reply_to_client(message, node)
                 # self.make_fault_data(node)
         
@@ -100,22 +109,22 @@ class rPBFT():
         if node.is_faulty is True:
             return
         
-        self.sequence_number += 1   
         request_digest = hashlib.sha256(str(request).encode()).hexdigest()
+        
         pre_prepare_message: Dict[str, Any] = {
             "stage": "PRE-PREPARE",
             "view": node.current_view_number,
-            "seq_num": self.sequence_number,
+            "seq_num": node.current_sequence_number,
             "digest": request_digest,
             "data": request,
             "node_id": node.node_id
         }
         
-        if node.processed_pre_prepare_messages == {} :
-            node.processed_pre_prepare_messages.update({'node_id_from': node.node_id, 
-                                                        'message': pre_prepare_message})
-        else:
-            return
+        # if node.processed_pre_prepare_messages == {} :
+        # print(node.processed_pre_prepare_messages)
+        # node.processed_pre_prepare_messages.update({'node_id_from': node.node_id, 
+        #                                                 'message': pre_prepare_message})
+        
         node.send_message_to_peers(pre_prepare_message, node.peers_list)
             
             
@@ -128,15 +137,14 @@ class rPBFT():
             "node_id": node.node_id,
         }
         
-        if node.processed_prepare_messages == {}:
-            node.processed_prepare_messages.update({'node_id_from': node.node_id, 
-                                                    'message': prepare_message})
-        else:
-            return
+        # if node.processed_prepare_messages == {}:
+        #     node.processed_prepare_messages.update({'node_id_from': node.node_id, 
+        #                                             'message': prepare_message})
+        # else:
+        #     return
         
         #fault data 존재 여부에 따라 전체에게 브로드캐스트 할수도 있고, 인접 노드 중 일부로 구성된 위원회 내부로만 전송할수도 있음.
         if self.check_fault_data(node) is True:
-            print("a")
             selected_committee_ids = self.select_committee(prepare_message)
             selected_committee_list = self.committee_node_list(node, selected_committee_ids)
             self.nodes_committee.append({'node_id': node.node_id, 'committee': selected_committee_list})
@@ -154,11 +162,11 @@ class rPBFT():
             "node_id": node.node_id,
         }
         
-        if node.processed_commit_messages == {}:
-            node.processed_commit_messages.update({'node_id_from': node.node_id, 
-                                                'message': commit_message})
-        else:
-            return
+        # if node.processed_commit_messages == {}:
+        #     node.processed_commit_messages.update({'node_id_from': node.node_id, 
+        #                                         'message': commit_message})
+        # else:
+        #     return
         
         if self.check_fault_data(node) is True:
             selected_committee_list = self.nodes_committee[node.node_id]['committee']
@@ -173,15 +181,16 @@ class rPBFT():
             "view": commit_message["view"],
             "timestamp": int(time.time()),
             "client_id": node.client_node.client_node_id,
+            "seq_num": commit_message["seq_num"],
             "result": "Execution Result",
             "digest": commit_message["digest"]
         }
         
-        if node.processed_reply_messages == {}:
-            node.processed_reply_messages.update({'node_id_from': node.node_id, 
-                                                'message': reply_message})
-        else:
-            return
+        # if node.processed_reply_messages == {}:
+        #     node.processed_reply_messages.update({'node_id_from': node.node_id, 
+        #                                         'message': reply_message})
+        # else:
+        #     return
         node.client_node.receive_reply(reply_message, self.count_of_faulty_nodes)
         self.make_fault_data(node)
     

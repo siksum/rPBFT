@@ -2,21 +2,20 @@ import threading
 import time
 from typing import List, Dict, TYPE_CHECKING, Any
 from blockchain import Blockchain
-from network import Server
-import random
+from network import Server, Client
 import hashlib
+import sys
 
 if TYPE_CHECKING:
     from pbft import PBFTHandler, PBFT
     from rPBFT.rPBFT import rPBFT
     from network import Server, Client
 
+
 def check_timeout(timer_start: float, timebase: float) :
     time_diff: float = time.time() - timer_start
-    if time_diff > timebase:
-        return False
-    else:
-        return True
+    return time_diff <= timebase
+
 
 class Node:
     def __init__(self, client_node: 'ClientNode', node_id: int, is_faulty: bool, blockchain: Blockchain, host: str, port: int, consensus_algorithm):
@@ -32,6 +31,7 @@ class Node:
         
         self.server = Server(host, port, self)
         self.server.start()
+        print(f"Node {self.node_id} is running.")
         self.peers: List[Client] = []
         self.peers_list: List[Dict[str, Any]] = []
         
@@ -70,6 +70,8 @@ class Node:
     
     
     def send_message_to_peers(self, message: Dict[str, Any], peers_list) -> None:
+        # print(f"[Send] Node: {self
+        # .node_id}, content: {message}, peer_list: {peers_list}")
         for peer in peers_list:
             peer["client"].send_message(str(message))
     
@@ -111,16 +113,17 @@ class Node:
         self.consensus_algorithm.handle_message(message_dict, self)
     
     
-    def validate_message(self, request: Dict[str, Any], received_prepare_messages: List[Dict[str, Any]]):
-        for received_prepare_message in received_prepare_messages:
-            if (received_prepare_message['message']['seq_num'] == request['seq_num'] and
-                    received_prepare_message['message']['digest'] == request['digest']):
+    def validate_message(self, request: Dict[str, Any], received_messages: List[Dict[str, Any]]):
+        for received_message in received_messages:
+            if (received_message['message']['seq_num'] == request['seq_num'] and
+                    received_message['message']['digest'] == request['digest']):
                 return True
 
     def stop(self):
+        print(f"Node {self.node_id} is stopping.")
         self.server.stop()
-        for peer in self.peers:
-            peer.close()
+        for peer in self.peers_list:
+            peer['client'].close()
             
 
 class ClientNode:
@@ -128,7 +131,8 @@ class ClientNode:
         self.client_node_id: int = client_id
         self.blockchain: 'Blockchain' = blockchain
         self.port: int = port
-        self.request_messages: Dict[str, Any] = {}
+        self.request_messages: List[Dict[str, Any]] = []
+        self.digests_of_requests: List[str] = []
         self.count_of_replies: int = 0
         self.nodes: List['Node'] = nodes
         self.primary_node: 'PrimaryNode' = None
@@ -140,12 +144,13 @@ class ClientNode:
             "timestamp": timestamp,
             "client_id": self.client_node_id
         }
-        self.request_messages: Dict[str, Any] = request
-        print(f"[Send] Client Node: {self.client_node_id} -> Primary Node: {self.request_messages}")
+        self.request_messages.append(request)
+        self.digests_of_requests.append(hashlib.sha256(str(request).encode()).hexdigest())
+        print(f"[Send] Client Node: {self.client_node_id} -> Primary Node: {request}")
         
         # for node in self.nodes[1:]:
         #     node.send_message_to_all(self.request_messages)
-        pbft_handler.send_request_to_primary(self.request_messages)
+        pbft_handler.send_request_to_primary(request)
 
     def receive_reply(self, reply_message: Dict[str, Any], count_of_faulty_nodes: int) -> None:
         """_summary_
@@ -156,7 +161,8 @@ class ClientNode:
         if self.nodes[self.client_node_id].view_change_timer:
             self.nodes[self.client_node_id].view_change_timer.cancel()
 
-        print(f"[Recieve] Client Node: {self.client_node_id} received reply: {reply_message}")
+        print(f"[Recieve] Node: {self.client_node_id}, content: {reply_message}")
+        sys.stdout.flush() #print문에 바이너리 데이터가 포함된 경우가 있어서 추가
         
         if self.validate_reply(reply_message) is True:
             self.count_of_replies += 1
@@ -171,17 +177,14 @@ class ClientNode:
                 
             self.blockchain.add_block_to_blockchain(reply_message)
             print(f"[ADD BLOCK] Client Node added block: {reply_message}")
-            return
             
         else:
             print(f"Client Node: {self.client_node_id} received {self.count_of_replies} replies.")
             
     def validate_reply(self, reply_message: Dict[str, Any]) -> None:
         #reply 메시지와 request 메시지의 digest 같은지 비교 -> reply digest는 request digest이기 때문
-        request_digest = hashlib.sha256(str(self.request_messages).encode()).hexdigest()
         
-        if request_digest == reply_message['digest']:
-            print(f"Client Node: {self.client_node_id} validated reply: {reply_message}")
+        if reply_message['digest'] in self.digests_of_requests:
             return True
         else:
             return False
@@ -189,12 +192,13 @@ class ClientNode:
     @property
     def request(self):
         return self.request_messages   
-
+    
 class PrimaryNode:
     def __init__(self, node: 'Node', pbft_algorithm):
         self.node: 'Node' = node
         self.node_id: int = node.node_id
         self.pbft_algorithm = pbft_algorithm
+        self.sequence_number: int = 0
 
     def receive_request(self, request: Dict[str, Any]):
         print(f"[Recieve] Primary Node: {self.node_id}, content: {request}")
@@ -205,6 +209,8 @@ class PrimaryNode:
             self.node.received_request_messages['node_id_to'] = self.node_id
             self.node.received_request_messages['node_id_from'] = request['client_id']
             self.node.received_request_messages['message'] = request
+            
+            self.node.current_sequence_number += 1
             
             self.pbft_algorithm.pre_prepare(request, self.node)
         

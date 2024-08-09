@@ -34,18 +34,29 @@ class Server:
                 break
 
     def handle_client(self, client_socket) -> None:
+        buffer = ""
         try:
             while self.running:
                 message_bytes = client_socket.recv(1024)
                 if message_bytes:
-                    message = json.loads(message_bytes.decode('utf-8'))
-                    self.node.receive_message(message)
+                    buffer += message_bytes.decode('utf-8')
+                    
+                    while True:
+                        try:
+                            message, index = json.JSONDecoder().raw_decode(buffer)
+                            buffer = buffer[index:].lstrip()
+                            self.node.receive_message(message)
+                        except json.JSONDecodeError:
+                            break
+                
                 else:
                     break  # 클라이언트가 연결을 종료한 경우
         except (BrokenPipeError, ConnectionResetError) as e:
             logging.error(f"Socket error: {e}")
         except json.JSONDecodeError as e:
             logging.error(f"JSON decoding error: {e}")
+            logging.error(f"Message received: {message_bytes.decode('utf-8')}")
+            logging.error(f"Error Location: {e.lineno}:{e.colno} (char {e.pos})")
         except Exception as e:
             logging.error(f"Unexpected error: {e}")
         finally:
@@ -67,11 +78,13 @@ class Server:
 
     def stop(self) -> None:
         self.running: bool = False
-        for client in self.clients:
-            try:
-                client.close()
-            except (BrokenPipeError, IOError) as e:
-                print(f"소켓 오류 발생: {e}")
+        # for client in self.clients:
+        #     try:
+        #         client.close()
+        #         print("Server stopped.")
+                
+        #     except (BrokenPipeError, IOError) as e:
+        #         print(f"소켓 오류 발생: {e}")
         self.server_socket.close()
 
 
@@ -84,8 +97,8 @@ class Client:
 
     def send_message(self, message: str) -> None:
         if self.client_socket.fileno() == -1:
-            logging.error("Socket is invalid.")
-            return
+            logging.error("Socket is invalid. Attempting to reconnect.")
+            self.client_socket.connect((self.host, self.port))
         try:
             message_bytes = json.dumps(message).encode('utf-8')
             self.client_socket.sendall(message_bytes)

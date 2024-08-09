@@ -119,10 +119,10 @@ class Test:
         self.pbft_algorithm.count_of_faulty_nodes = len(self.pbft_handler.list_of_faulty_nodes)
         self.pbft_handler.initialize_network()
     
-    def send_request(self) -> None:
-        self.client_node.send_request(self.pbft_handler, "Transaction Data", int(time.time()))        
+    def send_request(self, transaction_data) -> None:
+        self.client_node.send_request(self.pbft_handler, transaction_data, int(time.time()))        
         # 최종 생성된 체인 확인하는 시간
-        time.sleep(3)
+        # time.sleep(3)
         
     def print_blockchain(self) -> None:
         for block in self.blockchain.chain:
@@ -132,6 +132,9 @@ class Test:
         is_valid: bool = self.blockchain.is_valid_block(self.blockchain.get_latest_block())
         print(f"Blockchain valid: {is_valid}")
         
+    def close(self) -> None:
+        if self.client_node:
+            self.client_node.client.close()       
         
 if __name__ == "__main__":
     pbft_test = None
@@ -151,29 +154,33 @@ if __name__ == "__main__":
         elif args.algorithm == 'rPBFT':
             generate_faulty_nodes = Reliability(1000, args.nodes)
 
-            if args.model == 'infant':
-                generate_faulty_nodes.generate_infant_mortality(400, 0.7)
-                generate_faulty_nodes.get_random_failures(generate_faulty_nodes.infant_mortality)
+            # if args.model == 'infant':
+            #     generate_faulty_nodes.generate_infant_mortality(400, 0.7)
+            #     generate_faulty_nodes.get_random_failures(generate_faulty_nodes.infant_mortality)
                 
-            elif args.model == 'random':
-                generate_faulty_nodes.generate_random_failures(0.001)
-                generate_faulty_nodes.get_random_failures(generate_faulty_nodes.random_failures)
+            # elif args.model == 'random':
+            #     generate_faulty_nodes.generate_random_failures(0.001)
+            #     generate_faulty_nodes.get_random_failures(generate_faulty_nodes.random_failures)
                 
-            elif args.model == 'wearout':
-                generate_faulty_nodes.generate_wear_out(6.8, 0.1)
-                generate_faulty_nodes.get_random_failures(generate_faulty_nodes.wear_out)
+            # elif args.model == 'wearout':
+            #     generate_faulty_nodes.generate_wear_out(6.8, 0.1)
+            #     generate_faulty_nodes.get_random_failures(generate_faulty_nodes.wear_out)
                 
-            elif args.model == 'bathtub':
-                generate_faulty_nodes.generate_bathtub_curve()
-                generate_faulty_nodes.get_random_failures(generate_faulty_nodes.bathtub_curve)
+            # elif args.model == 'bathtub':
+            #     generate_faulty_nodes.generate_bathtub_curve()
+            #     generate_faulty_nodes.get_random_failures(generate_faulty_nodes.bathtub_curve)
+            
+            generate_faulty_nodes.list_of_random_failures = [0, 0, 0, 0]
             
             rpbft_test = Test(algorithm=rPBFT(), count_of_total_nodes=args.nodes, count_of_faulty_nodes=generate_faulty_nodes.count_of_faulty_nodes, port=args.port, blocksize=10)
             rpbft_test.setup_client_nodes()
             rpbft_test.setup_rpbft_nodes(generate_faulty_nodes.list_of_random_failures)
             rpbft_test.initialize_network()
-            rpbft_test.send_request()
+            print("[FAULTY NODES]", generate_faulty_nodes.list_of_random_failures)
+            for i in range(2):
+                rpbft_test.send_request(transaction_data= "Transaction Data "+str(i+1))
+            time.sleep(2)
             rpbft_test.print_blockchain()
-            rpbft_test.send_request()
             
     finally:
         if hasattr(pbft_test, 'pbft_handler') and pbft_test.pbft_handler is not None:
@@ -186,4 +193,3 @@ if __name__ == "__main__":
                 rpbft_test.pbft_handler.stop()
             except Exception as e:
                 logging.error(f"Error stopping rPBFT handler: {e}")
-
