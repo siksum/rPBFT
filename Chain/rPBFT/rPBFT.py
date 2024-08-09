@@ -41,7 +41,7 @@ class rPBFT():
         node.received_view_change_messages = []
         node.receive_new_view_messages = []   
         node.new_view_counter = False   
-         
+
         
     def handle_message(self, message: Dict[str, Any], node: 'Node') -> None:
         if message["stage"] == "PRE-PREPARE":
@@ -73,6 +73,7 @@ class rPBFT():
             
             if node.is_faulty is True:
                 return
+            
             if len(equal_seqnum) >= (2 * self.count_of_faulty_nodes + 1) and node.validate_message(message, equal_seqnum) is True:
                 self.send_reply_to_client(message, node)
                 # self.make_fault_data(node)
@@ -183,7 +184,8 @@ class rPBFT():
             "client_id": node.client_node.client_node_id,
             "seq_num": commit_message["seq_num"],
             "result": "Execution Result",
-            "digest": commit_message["digest"]
+            "digest": commit_message["digest"],
+            "node_id": node.node_id
         }
         
         # if node.processed_reply_messages == {}:
@@ -192,7 +194,7 @@ class rPBFT():
         # else:
         #     return
         node.client_node.receive_reply(reply_message, self.count_of_faulty_nodes)
-        self.make_fault_data(node)
+        # self.make_fault_data(node)
     
     
     def make_fault_data(self, node: 'Node') -> None:

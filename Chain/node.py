@@ -51,6 +51,7 @@ class Node:
         self.received_view_change_messages: List[Dict[str, Any]] = []
         self.receive_new_view_messages: List[Dict[str, Any]] = []
         
+        
         self.count_of_fault_data: int = 0
         self.sum_of_priorities: List[int] = []
         self.hasFaultyData: bool = False
@@ -62,7 +63,7 @@ class Node:
         self.view_change_timer: threading.Timer = None
         self.view_change_timeout_base: float = 2.0
         self.new_view_counter: bool = False
-        
+    
         
     def detect_failure_and_request_view_change(self)-> None:
         new_view: int = self.current_view_number + 1
@@ -132,10 +133,11 @@ class ClientNode:
         self.blockchain: 'Blockchain' = blockchain
         self.port: int = port
         self.request_messages: List[Dict[str, Any]] = []
-        self.digests_of_requests: List[str] = []
-        self.count_of_replies: int = 0
+        self.digests_of_requests: List[Dict[Any, int]] = []
+        self.count_of_replies: List[Dict[int, int]] = []
         self.nodes: List['Node'] = nodes
         self.primary_node: 'PrimaryNode' = None
+        self.received_reply_messages: List[Dict[str, Any]] = []
         
     def send_request(self, pbft_handler:'PBFTHandler', data: str, timestamp: int):
         request: Dict[str, Any] = {
@@ -144,8 +146,9 @@ class ClientNode:
             "timestamp": timestamp,
             "client_id": self.client_node_id
         }
-        self.request_messages.append(request)
-        self.digests_of_requests.append(hashlib.sha256(str(request).encode()).hexdigest())
+        request_digest = hashlib.sha256(str(request).encode()).hexdigest()
+        self.request_messages.append({'request': request, 'digest': request_digest, 'reply_count': 0})
+        # self.digests_of_requests.append({request_digest: 0})
         print(f"[Send] Client Node: {self.client_node_id} -> Primary Node: {request}")
         
         # for node in self.nodes[1:]:
@@ -160,31 +163,58 @@ class ClientNode:
         """
         if self.nodes[self.client_node_id].view_change_timer:
             self.nodes[self.client_node_id].view_change_timer.cancel()
-
+        
         print(f"[Recieve] Node: {self.client_node_id}, content: {reply_message}")
         sys.stdout.flush() #print문에 바이너리 데이터가 포함된 경우가 있어서 추가
         
-        if self.validate_reply(reply_message) is True:
-            self.count_of_replies += 1
+        current_digest = reply_message['digest']
+        current_reqeust = None
+        count_of_current_replies = 0
         
-        if self.count_of_replies >= count_of_faulty_nodes + 1:
+        if self.validate_reply(current_digest) is True:
+            if len(self.received_reply_messages) == 0:
+                self.received_reply_messages.append(reply_message)
+            else:
+                is_duplicate = any(reply_message['digest'] == message['digest'] 
+                                   and reply_message['node_id'] == message['node_id'] 
+                                   for message in self.received_reply_messages)
+                
+                if not is_duplicate:
+                    self.received_reply_messages.append(reply_message)
+        
+        else:
+            return
+        
+        count_of_current_replies = sum(1 for message in self.received_reply_messages if message['digest'] == current_digest)
+        for message in self.request_messages:
+            if current_digest in message['digest']:
+                message['reply_count'] = count_of_current_replies
+                current_reqeust = message['request']
+                break
+        
+        
+        if count_of_current_replies >= count_of_faulty_nodes + 1:
             for node in self.nodes:
                 if node.view_change_timer:
                     node.view_change_timer.cancel()    
+            for block in self.blockchain.chain:
+                if block.data == current_reqeust:
+                    return
+            else:
+                print(f"[ADD BLOCK] Client Node added block: {current_reqeust}")
+                self.blockchain.add_block_to_blockchain(current_reqeust)
             
-            if self.blockchain.chain[-1].data == reply_message:
-                return
-                
-            self.blockchain.add_block_to_blockchain(reply_message)
-            print(f"[ADD BLOCK] Client Node added block: {reply_message}")
             
-        else:
-            print(f"Client Node: {self.client_node_id} received {self.count_of_replies} replies.")
+        # else:
+        #     print(f"Client Node: {self.client_node_id} received {self.count_of_replies} replies.")
             
-    def validate_reply(self, reply_message: Dict[str, Any]) -> None:
+    def validate_reply(self, reply_digest) -> None:
         #reply 메시지와 request 메시지의 digest 같은지 비교 -> reply digest는 request digest이기 때문
+        all_keys = []
+        for message in self.request_messages:
+            all_keys.append(message['digest'])
         
-        if reply_message['digest'] in self.digests_of_requests:
+        if reply_digest in all_keys:
             return True
         else:
             return False

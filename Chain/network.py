@@ -41,24 +41,27 @@ class Server:
                 if message_bytes:
                     buffer += message_bytes.decode('utf-8')
                     
-                    while True:
+                    while buffer:
                         try:
                             message, index = json.JSONDecoder().raw_decode(buffer)
-                            buffer = buffer[index:].lstrip()
+                            buffer = buffer[index:].lstrip()  # 이미 처리된 부분 제거
                             self.node.receive_message(message)
                         except json.JSONDecodeError:
-                            break
-                
+                            break  # 현재 버퍼가 완전한 JSON 메시지를 포함하지 않음
+
                 else:
                     break  # 클라이언트가 연결을 종료한 경우
+
         except (BrokenPipeError, ConnectionResetError) as e:
             logging.error(f"Socket error: {e}")
         except json.JSONDecodeError as e:
             logging.error(f"JSON decoding error: {e}")
-            logging.error(f"Message received: {message_bytes.decode('utf-8')}")
+            logging.error(f"Partial buffer content: {buffer}")
             logging.error(f"Error Location: {e.lineno}:{e.colno} (char {e.pos})")
         except Exception as e:
             logging.error(f"Unexpected error: {e}")
+            logging.error(f"Buffer content at error: {buffer}")
+            logging.error("Traceback information:", exc_info=True)
         finally:
             try:
                 if client_socket.fileno() != -1:
