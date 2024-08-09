@@ -94,9 +94,9 @@ class Node:
         if message == "None":
             return
         
-        print(f"[Recieve] Node: {self.node_id}, ", end="")
+        # print(f"[Recieve] Node: {self.node_id}, ", end="")
         message_dict: Dict = eval(message)
-        print(f"content: {message_dict}")
+        # print(f"content: {message_dict}")
         
         if message_dict.get('stage') == "REQUEST":
             if not self.view_change_timer:
@@ -164,7 +164,6 @@ class ClientNode:
         if self.nodes[self.client_node_id].view_change_timer:
             self.nodes[self.client_node_id].view_change_timer.cancel()
         
-        print(f"[Recieve] Node: {self.client_node_id}, content: {reply_message}")
         sys.stdout.flush() #print문에 바이너리 데이터가 포함된 경우가 있어서 추가
         
         current_digest = reply_message['digest']
@@ -173,6 +172,7 @@ class ClientNode:
         
         if self.validate_reply(current_digest) is True:
             if len(self.received_reply_messages) == 0:
+                print(f"[Recieve] Node: {self.client_node_id}, content: {reply_message}")
                 self.received_reply_messages.append(reply_message)
             else:
                 is_duplicate = any(reply_message['digest'] == message['digest'] 
@@ -180,6 +180,7 @@ class ClientNode:
                                    for message in self.received_reply_messages)
                 
                 if not is_duplicate:
+                    print(f"[Recieve] Node: {self.client_node_id}, content: {reply_message}")
                     self.received_reply_messages.append(reply_message)
         
         else:

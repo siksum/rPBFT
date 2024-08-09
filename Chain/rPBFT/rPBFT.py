@@ -3,7 +3,7 @@ from node import PrimaryNode, ClientNode
 from pbft import PBFT, PBFTHandler
 import time
 import hashlib
-from utils import groupby_sorted
+from utils import *
 
 if TYPE_CHECKING:
     from node import Node
@@ -47,18 +47,27 @@ class rPBFT():
         if message["stage"] == "PRE-PREPARE":
             # node.received_pre_prepare_messages.append({'node_id_to' : node.node_id, 'node_id_from': message['node_id'], 'message': message})
             # print(node.received_prepare_messages)
+            print(f"[Recieve] Node: {node.node_id}, content: {message}")
             
             if node.is_faulty is True:
                 return
             self.prepare(message, node)
             
         elif message["stage"] == "PREPARE":
-            node.received_prepare_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
+            new_message = {'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message}
+            node.received_prepare_messages.append(new_message)
+            
+            if not check_duplicate(new_message, node.received_prepare_messages[:-1]):
+                print(f"[Recieve] Node: {node.node_id}, content: {message}")
+            else:
+                node.received_prepare_messages = remove_duplicates(node.received_prepare_messages)
+            
             sorted_by_seqnum = groupby_sorted(node.received_prepare_messages)
             equal_seqnum = sorted_by_seqnum.get(message['seq_num'])
-            
+
             if node.is_faulty is True:
                 return
+            
             if len(equal_seqnum) >= 2 * self.count_of_faulty_nodes and node.validate_message(message, equal_seqnum) is True:
                 self.commit(message, node)
         
@@ -67,7 +76,14 @@ class rPBFT():
             if node.view_change_timer:
                 node.view_change_timer.cancel()
             
-            node.received_commit_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
+            new_message = {'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message}
+            node.received_commit_messages.append(new_message)
+            
+            if not check_duplicate(new_message, node.received_commit_messages[:-1]):
+                print(f"[Recieve] Node: {node.node_id}, content: {message}")
+            else:
+                node.received_commit_messages = remove_duplicates(node.received_commit_messages)
+            
             sorted_by_seqnum = groupby_sorted(node.received_commit_messages)
             equal_seqnum = sorted_by_seqnum.get(message['seq_num'])
             
