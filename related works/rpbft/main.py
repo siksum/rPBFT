@@ -29,8 +29,9 @@ if __name__ == "__main__":
             reliability_combined.append(reliability_generator.generate(a, s, reliability_generator.combined))
             reliability_none.append(reliability_generator.generate(a, s, reliability_generator.none))
 
-        # print(reliability_infant)
-        # print(reliability_combined[0].faultrate)
+        print(reliability_infant)
+        # print(len(reliability_infant))
+        print(reliability_combined[0].faultrate)
         # print(reliability_combined[1].faultrate)
         # 노드 생성
         infant_node_generator = Node(numberofNodes, reliability_infant)

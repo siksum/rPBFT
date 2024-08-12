@@ -101,7 +101,6 @@ def run_APBFT(nodes,proportion,checkpoint_frequency0,clients_ports0,timer_limit_
     threading.Thread(target=run_nodes,args=(nodes,)).start()
 
 def run_nodes(nodes):
-
     global j
     global n
     global f
@@ -152,8 +151,6 @@ def run_nodes(nodes):
 
 # Update consensus nodes
 def update_consensus_nodes():    # We only keep nodes with the highest scores, with a number of nodes between min_nodes and max_nodes.
-
-    
     global consensus_nodes
     #global new_nodes
     min_nodes=4

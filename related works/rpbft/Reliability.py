@@ -60,8 +60,6 @@ class Reliability:
         return prob
 
 
-
-
     #a = random.choices([0, 1], weights=[0.3, 1])
 
     #print(a)
