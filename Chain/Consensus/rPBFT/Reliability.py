@@ -41,7 +41,8 @@ class Reliability:
         return [success_rate, scaled_failure_rate]
     
     def get_random_failures(self, model):
-        for i in range(0, len(model)):
+        self.list_of_random_failures.append(0)
+        for i in range(1, len(model)):
             weights = self.get_weights(model[i])
             self.list_of_random_failures.append(self.random_choice(weights))
         

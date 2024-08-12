@@ -10,6 +10,7 @@ from typing import List
 import random
 import argparse
 import logging
+import sys
 
 LOCALHOST = "localhost"
 
@@ -32,8 +33,8 @@ def argument_parser():
     args = parser.parse_args()
 
     # Check if the condition 3f + 1 <= n is satisfied
-    if args.algorithm == 'PBFT' and args.nodes < 3 * args.faulty_nodes + 1:
-        parser.error("Total number of nodes must be at least 3 times the number of faulty nodes plus one (3f + 1).")
+    # if args.algorithm == 'PBFT' and args.nodes < 3 * args.faulty_nodes + 1:
+    #     parser.error("Total number of nodes must be at least 3 times the number of faulty nodes plus one (3f + 1).")
 
     return args
 
@@ -83,6 +84,7 @@ class Test:
     
     
     def setup_rpbft_nodes(self, list_of_random_failures: List[int]) -> None:
+        print("[FAULTY NODES]", list_of_random_failures)
         for i in range(0, len(list_of_random_failures)):
             if list_of_random_failures[i] == 1:
                 node:Node = Node(self.client_node, 
@@ -92,7 +94,6 @@ class Test:
                                 LOCALHOST, 
                                 self.port + i, 
                                 self.pbft_algorithm)
-                self.list_of_total_nodes.append(node)
             else:
                 node:Node = Node(self.client_node, 
                                 i+1, 
@@ -101,7 +102,7 @@ class Test:
                                 LOCALHOST, 
                                 self.port + i, 
                                 self.pbft_algorithm)
-                self.list_of_total_nodes.append(node)
+            self.list_of_total_nodes.append(node)
         
         self.primary_node = PrimaryNode(self.list_of_total_nodes[0], self.pbft_algorithm)
         self.primary_node.node.is_primary = True
@@ -113,7 +114,8 @@ class Test:
         for node in self.list_of_total_nodes:
             node.primary_node = self.primary_node
         
-        random.choice(self.list_of_total_nodes).is_faulty = True
+        for node in random.sample(self.list_of_total_nodes, self.count_of_faulty_nodes):
+            node.is_faulty = True
         
         
     def initialize_network(self) -> None:
@@ -121,7 +123,7 @@ class Test:
         for node in self.list_of_total_nodes:
             node.client_node = self.client_node
         
-        self.pbft_algorithm.count_of_faulty_nodes = len(self.pbft_handler.list_of_faulty_nodes)
+        self.pbft_algorithm.count_of_faulty_nodes = self.count_of_faulty_nodes
         self.pbft_handler.initialize_network()
     
     
@@ -186,15 +188,15 @@ if __name__ == "__main__":
                 generate_faulty_nodes.generate_bathtub_curve(400, 0.7, 0.001, 6.8, 0.1)
                 generate_faulty_nodes.get_random_failures(generate_faulty_nodes.bathtub_curve)
             
-            generate_faulty_nodes.list_of_random_failures = [0] * 39
+            generate_faulty_nodes.list_of_random_failures = [0] * 100
+            generate_faulty_nodes.count_of_faulty_nodes = 0
             rpbft_test = Test(algorithm=rPBFT(), count_of_total_nodes=args.nodes, count_of_faulty_nodes=generate_faulty_nodes.count_of_faulty_nodes, port=args.port, blocksize=10)
             rpbft_test.setup_client_nodes()
             rpbft_test.setup_rpbft_nodes(generate_faulty_nodes.list_of_random_failures)
             rpbft_test.initialize_network()
-            # print("[FAULTY NODES]", generate_faulty_nodes.list_of_random_failures)
-            for i in range(100):
+            for i in range(1000):
                 rpbft_test.send_request(transaction_data= "Transaction Data "+str(i+1))
-                time.sleep(1)
+                # time.sleep(1)
             time.sleep(1)
             rpbft_test.print_blockchain()
             round_time = time.time() - start

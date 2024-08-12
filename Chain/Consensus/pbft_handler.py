@@ -22,12 +22,19 @@ class PBFTHandler:
         self.primary_node.receive_request(request)
 
 
+    # def initialize_network(self) -> None:
+    #     for node in self.list_of_total_nodes:
+    #         for peer in self.list_of_total_nodes:
+    #             if node.node_id != peer.node_id:
+    #                 node.peers_list.append({"node_id": peer.node_id, "client": Client(peer.host, peer.port)})
+    
     def initialize_network(self) -> None:
+        client_map = {peer.node_id: Client(peer.host, peer.port) for peer in self.list_of_total_nodes}
+
         for node in self.list_of_total_nodes:
-            for peer in self.list_of_total_nodes:
-                if node.node_id != peer.node_id:
-                    node.peers_list.append({"node_id": peer.node_id, "client": Client(peer.host, peer.port)})
-                    
+            node.peers_list = [{"node_id": peer_id, "client": client} 
+                            for peer_id, client in client_map.items() if peer_id != node.node_id]
+
     
     def stop(self) -> None:
         for node in self.list_of_total_nodes:

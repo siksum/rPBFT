@@ -23,54 +23,51 @@ class rPBFT():
         self.nodes_to_send_fault_data: Dict[str, Any] = {}
     
         
-    def handle_message(self, message: Dict[str, Any], node: 'Node') -> None:
+    def handle_message(self, message: Dict[str, Any], node: 'Node') -> None:       
         if message["stage"] == "PRE-PREPARE":
-            new_message = {'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message}
-            node.received_pre_prepare_messages.append(new_message)
-            # print(f"[Recieve] Node: {node.node_id}, content: {message}")
-            
             if node.is_faulty is True:
                 return
+            new_message = {'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message}
+            node.received_pre_prepare_messages.append(new_message)
+            print(f"[Recieve] Node: {node.node_id}, content: {message}")
+            
             self.prepare(message, node)
             
         elif message["stage"] == "PREPARE":
+            if node.is_faulty is True:
+                return
+            if node.client_node.is_block_added[message["digest"]] is True:
+                return
             new_message = {'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message}
             node.received_prepare_messages.append(new_message)
             
             if not check_duplicate(new_message, node.received_prepare_messages[:-1]):
-                # print(f"[Recieve] Node: {node.node_id}, content: {message}")
-                pass
+                print(f"[Recieve] Node: {node.node_id}, content: {message}")
             else:
                 node.received_prepare_messages = remove_duplicates(node.received_prepare_messages)
             
             sorted_by_seqnum = groupby_sorted(node.received_prepare_messages)
             equal_seqnum = sorted_by_seqnum.get(message['seq_num'])
-
-            if node.is_faulty is True:
-                return
             
             if len(equal_seqnum) >= 2 * self.count_of_faulty_nodes and node.validate_message(message, equal_seqnum) is True:
                 self.commit(message, node)
         
         # COMMIT, VIEW-CHANGE, NEW-VIEW 메시지를 받은 노드는 더이상 타이머가 필요없으므로 종료시킴.
         elif message["stage"] == "COMMIT":
-            # if node.view_change_timer:
-            #     node.view_change_timer.cancel()
-            
+            if node.is_faulty is True:
+                return
+            if node.client_node.is_block_added[message["digest"]] is True:
+                return
             new_message = {'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message}
             node.received_commit_messages.append(new_message)
             
             if not check_duplicate(new_message, node.received_commit_messages[:-1]):
-                # print(f"[Recieve] Node: {node.node_id}, content: {message}")
-                pass
+                print(f"[Recieve] Node: {node.node_id}, content: {message}")
             else:
                 node.received_commit_messages = remove_duplicates(node.received_commit_messages)
             
             sorted_by_seqnum = groupby_sorted(node.received_commit_messages)
             equal_seqnum = sorted_by_seqnum.get(message['seq_num'])
-            
-            # if node.is_faulty is True:
-            #     return
             
             if len(equal_seqnum) >= (2 * self.count_of_faulty_nodes + 1) and node.validate_message(message, equal_seqnum) is True:
                 self.send_reply_to_client(message, node)
@@ -80,8 +77,7 @@ class rPBFT():
             node.received_fault_data.append(new_message)
             
             if not check_duplicate(new_message, node.received_fault_data[:-1]):
-                # print(f"[Recieve] Node: {node.node_id}, content: {message}")
-                pass
+                print(f"[Recieve] Node: {node.node_id}, content: {message}")
             else:
                 node.received_fault_data = remove_duplicates(node.received_fault_data)
                 
@@ -105,7 +101,6 @@ class rPBFT():
             "data": request,
             "node_id": node.node_id
         }
-        
         node.send_message_to_peers(pre_prepare_message, node.peers_list)
             
             
@@ -123,7 +118,7 @@ class rPBFT():
         selected_committee_ids = self.select_committee(node)
         node.selected_committee_list = self.committee_node_list(node, selected_committee_ids)
         # self.nodes_committee.append({'node_id': node.node_id, 'committee': node.selected_committee_list})
-        # print("[SELECTED COMMITTEE]", node.node_id, node.selected_committee_list)
+        print("[SELECTED COMMITTEE]", node.node_id, node.selected_committee_list)
         node.send_message_to_peers(prepare_message, node.selected_committee_list)
         
         # if self.check_fault_data(node) is True:
@@ -169,9 +164,8 @@ class rPBFT():
         
         node.current_sequence_number = commit_message["seq_num"]
 
-        success_add_block = node.client_node.receive_reply(reply_message, self.count_of_faulty_nodes)
-        
-        if success_add_block is True:
+        node.client_node.receive_reply(reply_message, self.count_of_faulty_nodes)
+        if node.client_node.is_block_added[commit_message["digest"]] is True:
             self.make_fault_data(commit_message, node)
         else:
             return
@@ -200,7 +194,6 @@ class rPBFT():
             "digest": reply_message["digest"],
             "fault_info": fault_info
         }
-        
         self.share_fault_data(node, fault_data)
         
         

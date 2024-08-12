@@ -91,7 +91,7 @@ class Node:
         
         # self.view_change_timer: threading = threading.Timer(self.view_change_timeout_base, lambda: self.view_change_callback())
         # self.view_change_timer.start()
-        
+        sys.stdout.flush()
         message_dict: Dict = eval(message)
         self.consensus_algorithm.handle_message(message_dict, self)
     
@@ -121,9 +121,11 @@ class ClientNode:
         self.nodes: List['Node'] = nodes
         self.primary_node: 'PrimaryNode' = None
         self.received_reply_messages: List[Dict[str, Any]] = []
+        self.is_block_added: Dict[str, bool] = {}
         
         
     def send_request(self, pbft_handler:'PBFTHandler', data: str, timestamp: int):
+        
         request: Dict[str, Any] = {
             "stage": "REQUEST",
             "data": data,
@@ -131,6 +133,8 @@ class ClientNode:
             "client_id": self.client_node_id
         }
         request_digest = hashlib.sha256(str(request).encode()).hexdigest()
+        
+        self.is_block_added[request_digest] = False
         self.request_messages.append({'request': request, 'digest': request_digest, 'reply_count': 0})
         print(f"[Send] Client Node: {self.client_node_id} -> Primary Node: {request}")
         
@@ -149,6 +153,7 @@ class ClientNode:
         #     self.nodes[self.client_node_id].view_change_timer.cancel()
         
         sys.stdout.flush() #print문에 바이너리 데이터가 포함된 경우가 있어서 추가
+        
         
         current_digest = reply_message['digest']
         current_reqeust = None
@@ -185,11 +190,9 @@ class ClientNode:
             for block in self.blockchain.chain:
                 if block.data == current_reqeust:
                     return
-            else:
-                print(f"[ADD BLOCK] Client Node added block: {current_reqeust}")
-                self.blockchain.add_block_to_blockchain(current_reqeust)
-                return True
-        return False    
+            print(f"[ADD BLOCK] Client Node added block: {current_reqeust}")
+            self.blockchain.add_block_to_blockchain(current_reqeust)
+            self.is_block_added[current_digest] = True
             
         # else:
         #     print(f"Client Node: {self.client_node_id} received {self.count_of_replies} replies.")

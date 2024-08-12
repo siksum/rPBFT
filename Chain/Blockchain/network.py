@@ -6,95 +6,95 @@ from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from Consensus.node import Node
-    
-    
+
+
 class Server:
     def __init__(self, host: str, port: int, node: 'Node'):
         self.host: str = host
-        self.port = port
+        self.port: int = port
         self.node: 'Node' = node
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen(5)
-        self.clients: List = []
+        self.clients: List[socket.socket] = []
         self.running: bool = True
         self.clients_lock = threading.Lock()
+    
 
     def start(self) -> None:
-        threading.Thread(target=self.accept_clients).start()
+        threading.Thread(target=self.accept_clients, daemon=True).start()
 
     def accept_clients(self) -> None:
         while self.running:
             try:
                 client_socket, client_address = self.server_socket.accept()
-                self.clients.append(client_socket)
-                threading.Thread(target=self.handle_client, args=(client_socket,)).start()
-            except:
+                with self.clients_lock:
+                    self.clients.append(client_socket)
+                threading.Thread(target=self.handle_client, args=(client_socket,), daemon=True).start()
+            except (socket.error, OSError) as e:
+                logging.error(f"Socket error while receiving data: {e}")
+                break
+            except Exception as e:
+                logging.error(f"Unexpected error: {e}")
+                logging.error("Traceback information:", exc_info=True)
                 break
 
-    def handle_client(self, client_socket) -> None:
+    def handle_client(self, client_socket: socket.socket) -> None:
+        # client_socket.settimeout(10)
+        
         buffer = ""
         try:
             while self.running:
+                # try:
                 message_bytes = client_socket.recv(1024)
-                if message_bytes:
-                    buffer += message_bytes.decode('utf-8')
-                    
-                    while buffer:
-                        try:
-                            message, index = json.JSONDecoder().raw_decode(buffer)
-                            buffer = buffer[index:].lstrip()  # 이미 처리된 부분 제거
-                            self.node.receive_message(message)
-                        except json.JSONDecodeError:
-                            break  # 현재 버퍼가 완전한 JSON 메시지를 포함하지 않음
-
-                else:
+                if not message_bytes:
                     break  # 클라이언트가 연결을 종료한 경우
 
-        except (BrokenPipeError, ConnectionResetError) as e:
-            logging.error(f"Socket error: {e}")
-        except json.JSONDecodeError as e:
-            # logging.error(f"JSON decoding error: {e}")
-            # logging.error(f"Partial buffer content: {buffer}")
-            # logging.error(f"Error Location: {e.lineno}:{e.colno} (char {e.pos})")
-            logging.error(f"JSON decoding error")
-            logging.error(f"Partial buffer content")
-            logging.error(f"Error Location")
+                buffer += message_bytes.decode('utf-8')
+                logging.debug(f"Buffer content: {buffer}")
+
+                # 줄바꿈 문자를 기준으로 메시지 분리
+                while '\n' in buffer:
+                    message, buffer = buffer.split('\n', 1)
+                    if message.strip():
+                        try:
+                            parsed_message = json.loads(message)
+                            logging.debug(f"Parsed message: {parsed_message}")
+                            self.node.receive_message(parsed_message)
+                        except json.JSONDecodeError:
+                            logging.error(f"JSON decoding error with message: {message}")
+                            buffer = ""
+
+                # except OSError as e:
+                #     logging.error(f"Socket error while receiving data: {e}")
+                #     logging.error("Traceback information:", exc_info=True)
+                #     break
+
         except Exception as e:
-            # logging.error(f"Unexpected error: {e}")
-            # logging.error(f"Buffer content at error: {buffer}")
-            # logging.error("Traceback information:", exc_info=True)
-            logging.error(f"Unexpected error")
-            logging.error(f"Buffer content at error")
-            logging.error("Traceback information:")
+            logging.error(f"Unexpected error: {e}")
+            logging.error(f"Buffer content at error: {buffer}")
+            logging.error("Traceback information:", exc_info=True)
         finally:
-            try:
-                if client_socket.fileno() != -1:
-                    client_socket.close()
-            except Exception as e:
-                # logging.error(f"Error closing client socket: {e}")
-                logging.error(f"Error closing client socket")
+            client_socket.close()
 
-
-    def broadcast(self, message: str) -> None:
-        message_bytes: json = json.dumps(message).encode('utf-8')
+    def broadcast(self, message: dict) -> None:
+        message_bytes = (json.dumps(message) + '\n').encode('utf-8')
         with self.clients_lock:
             for client in self.clients:
                 try:
                     client.sendall(message_bytes)
-                except:
+                except (BrokenPipeError, IOError):
                     self.clients.remove(client)
 
     def stop(self) -> None:
-        self.running: bool = False
-        # for client in self.clients:
-        #     try:
-        #         client.close()
-        #         print("Server stopped.")
-                
-        #     except (BrokenPipeError, IOError) as e:
-        #         print(f"소켓 오류 발생: {e}")
+        self.running = False
+        with self.clients_lock:
+            for client in self.clients:
+                try:
+                    client.close()
+                except (BrokenPipeError, IOError) as e:
+                    logging.error(f"Socket error during shutdown: {e}")
         self.server_socket.close()
 
 
@@ -103,14 +103,21 @@ class Client:
         self.host: str = host
         self.port: int = port
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client_socket.connect((self.host, self.port))
+        self.connect()
 
-    def send_message(self, message: str) -> None:
+    def connect(self) -> None:
+        try:
+            self.client_socket.connect((self.host, self.port))
+        except Exception as e:
+            logging.error(f"Connection failed: {e}")
+
+    def send_message(self, message: dict) -> None:
         if self.client_socket.fileno() == -1:
             logging.error("Socket is invalid. Attempting to reconnect.")
-            self.client_socket.connect((self.host, self.port))
+            self.connect()
+
         try:
-            message_bytes = json.dumps(message).encode('utf-8')
+            message_bytes = (json.dumps(message) + '\n').encode('utf-8')
             self.client_socket.sendall(message_bytes)
         except (BrokenPipeError, IOError) as e:
             logging.error(f"Socket error: {e}")
@@ -118,4 +125,7 @@ class Client:
             logging.error(f"Unexpected error: {e}")
 
     def close(self) -> None:
-        self.client_socket.close()
+        try:
+            self.client_socket.close()
+        except Exception as e:
+            logging.error(f"Error closing socket: {e}")
