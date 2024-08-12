@@ -15,16 +15,16 @@ def parse_log(log_lines):
         
         if ("[Recieve] Primary Node:" and "content: {'stage': 'REQUEST',") in line:
             messages.append(('C', re.search(r'Primary Node: (\d+)', line).group(1), 'request'))
-        elif 'stage: REQUEST' in line:
-            messages.append(('C', re.search(r'Node: (\d+)', line).group(1), 'request'))
+        # elif 'stage: REQUEST' in line:
+        #     messages.append(('C', re.search(r'Node: (\d+)', line).group(1), 'request'))
         elif 'PRE-PREPARE' in line:
-            messages.append((re.search(r'from: Node (\d+)', line).group(1), re.search(r'Node: (\d+)', line).group(1), 'pre-prepare'))
+            messages.append((re.search(r"'node_id': (\d+)", line).group(1), re.search(r'Node: (\d+)', line).group(1), 'pre-prepare'))
         elif 'PREPARE' in line:
-            messages.append((re.search(r'from: Node (\d+)', line).group(1), re.search(r'Node: (\d+)', line).group(1), 'prepare'))
+            messages.append((re.search(r"'node_id': (\d+)", line).group(1), re.search(r'Node: (\d+)', line).group(1), 'prepare'))
         elif 'COMMIT' in line:
-            messages.append((re.search(r'from: Node (\d+)', line).group(1), re.search(r'Node: (\d+)', line).group(1), 'commit'))
-        elif 'REPLY' in line and 'Client Node:' in line:
-            messages.append((re.search(r"node_id': (\d+)", line).group(1), 'C', 'reply'))
+            messages.append((re.search(r"'node_id': (\d+)", line).group(1), re.search(r'Node: (\d+)', line).group(1), 'commit'))
+        elif 'REPLY' in line:
+            messages.append((re.search(r"'node_id': (\d+)", line).group(1), 'C', 'reply'))
     
     return sorted(list(nodes)), messages
 

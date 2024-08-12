@@ -9,14 +9,14 @@ class Reliability:
         self.infant_mortality = None
         self.random_failures = None
         self.wear_out = None
-        self.bathtub_curve = None
+        self.bathtub_curve = []
         self.count_of_total_nodes: int = count_of_total_nodes
         self.count_of_normal_nodes: int = 0
         self.count_of_faulty_nodes: int = 0
         self.list_of_random_failures: List[int] = []
         
     def generate_infant_mortality(self, alpha, beta):
-        self.infant_mortality = Weibull_Distribution(alpha, beta).HF(xvals=self.xvals, show_plot=False)[1:]
+        self.infant_mortality = Weibull_Distribution(alpha, beta).HF(xvals=self.xvals, show_plot=False)
         
     def generate_random_failures(self, Lambda):
         self.random_failures = Exponential_Distribution(Lambda).HF(xvals=self.xvals, show_plot=False)
@@ -24,8 +24,13 @@ class Reliability:
     def generate_wear_out(self, mu, sigma):
         self.wear_out = Lognormal_Distribution(mu, sigma).HF(xvals=self.xvals, show_plot=False)
 
-    def generate_bathtub_curve(self):    
-        self.bathtub_curve = self.infant_mortality + self.random_failures + self.wear_out
+    def generate_bathtub_curve(self, alpha, beta, Lambda, mu, sigma):
+        self.generate_infant_mortality(alpha, beta)
+        self.generate_random_failures(Lambda)
+        self.generate_wear_out(mu, sigma)
+        
+        for i in range(0, len(self.xvals)):
+            self.bathtub_curve.append(self.infant_mortality[i] + self.random_failures[i] + self.wear_out[i])
         
     def random_choice(self, weights: List[float]) -> int:
         return random.choices([0, 1], weights=weights)[0]

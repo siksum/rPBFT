@@ -4,6 +4,8 @@ import time
 from node import PrimaryNode, ClientNode
 from abstract import ConsensusAlgorithm
 from network import Client
+from utils import *
+import hashlib
 
 if TYPE_CHECKING:
     from node import Node
@@ -19,14 +21,12 @@ class PBFT(ConsensusAlgorithm):
         self.sequence_number: int = 0
         self.sent_replies: set = set() 
     
+    
     def set_nodes(self, nodes: List['Node']) -> None:
         self.nodes: List['Node'] = nodes
     
+    
     def initialize_memory(self, node: 'Node') -> None:
-        node.processed_pre_prepare_messages = {}
-        node.processed_prepare_messages = {}
-        node.processed_commit_messages = {}
-        node.processed_reply_messages = {}
         node.processed_view_change_messages = {}
         node.processed_new_view_messages = {}
         
@@ -41,27 +41,52 @@ class PBFT(ConsensusAlgorithm):
         
     def handle_message(self, message: Dict[str, Any], node: 'Node') -> None:
         if message["stage"] == "PRE-PREPARE":
-            node.received_pre_prepare_messages.append({'node_id_to' : node.node_id, 'node_id_from': message['node_id'], 'message': message})
+            new_message = {'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message}
+            node.received_pre_prepare_messages.append(new_message)
+            print(f"[Recieve] Node: {node.node_id}, content: {message}")
+            
             if node.is_faulty is True:
                 return
             self.prepare(message, node)
             
         elif message["stage"] == "PREPARE":
-            node.received_prepare_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
+            new_message = {'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message}
+            node.received_prepare_messages.append(new_message)
+            
+            if not check_duplicate(new_message, node.received_prepare_messages[:-1]):
+                print(f"[Recieve] Node: {node.node_id}, content: {message}")
+            else:
+                node.received_prepare_messages = remove_duplicates(node.received_prepare_messages)
+            
+            sorted_by_seqnum = groupby_sorted(node.received_prepare_messages)
+            equal_seqnum = sorted_by_seqnum.get(message['seq_num'])
+
             if node.is_faulty is True:
                 return
-            if len(node.received_prepare_messages) >= 2 * self.count_of_faulty_nodes and node.validate_message(message, node.received_prepare_messages) is True:
+            
+            if len(equal_seqnum) >= 2 * self.count_of_faulty_nodes and node.validate_message(message, equal_seqnum) is True:
                 self.commit(message, node)
         
         # COMMIT, VIEW-CHANGE, NEW-VIEW 메시지를 받은 노드는 더이상 타이머가 필요없으므로 종료시킴.
         elif message["stage"] == "COMMIT":
-            if node.view_change_timer:
-                node.view_change_timer.cancel()
+            # if node.view_change_timer:
+            #     node.view_change_timer.cancel()
                 
-            node.received_commit_messages.append({'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message})
+            new_message = {'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message}
+            node.received_commit_messages.append(new_message)
+            
+            if not check_duplicate(new_message, node.received_commit_messages[:-1]):
+                print(f"[Recieve] Node: {node.node_id}, content: {message}")
+            else:
+                node.received_commit_messages = remove_duplicates(node.received_commit_messages)
+            
+            sorted_by_seqnum = groupby_sorted(node.received_commit_messages)
+            equal_seqnum = sorted_by_seqnum.get(message['seq_num'])
+            
             if node.is_faulty is True:
                 return
-            if len(node.received_commit_messages) >= (2 * self.count_of_faulty_nodes + 1) and node.validate_message(message, node.received_commit_messages) is True:
+            
+            if len(equal_seqnum) >= (2 * self.count_of_faulty_nodes + 1) and node.validate_message(message, equal_seqnum) is True:
                 self.send_reply_to_client(message, node)
                 
         elif message["stage"] == "VIEW-CHANGE":
@@ -88,10 +113,6 @@ class PBFT(ConsensusAlgorithm):
 
                 
     def pre_prepare(self, request: Dict[str, Any], node: 'Node') -> None:
-        if node.is_faulty is True:
-            return
-        
-        self.sequence_number += 1   
         request_digest = hashlib.sha256(str(request).encode()).hexdigest()
 
         pre_prepare_message: Dict[str, Any] = {
@@ -103,11 +124,9 @@ class PBFT(ConsensusAlgorithm):
             "node_id": node.node_id
         }
         
-        if node.processed_pre_prepare_messages == {} :
-            node.processed_pre_prepare_messages.update({'node_id_from': node.node_id, 
-                                                        'message': pre_prepare_message})
-        else:
-            return
+        # if node.is_faulty is True:
+        #     node.send_message_to_peers(None, node.peers_list)
+        # else:
         node.send_message_to_peers(pre_prepare_message, node.peers_list)
             
             
@@ -120,11 +139,6 @@ class PBFT(ConsensusAlgorithm):
             "node_id": node.node_id,
         }
         
-        if node.processed_prepare_messages == {}:
-            node.processed_prepare_messages.update({'node_id_from': node.node_id, 
-                                                    'message': prepare_message})
-        else:
-            return
         node.send_message_to_peers(prepare_message, node.peers_list)
            
             
@@ -137,11 +151,6 @@ class PBFT(ConsensusAlgorithm):
             "node_id": node.node_id,
         }
         
-        if node.processed_commit_messages == {}:
-            node.processed_commit_messages.update({'node_id_from': node.node_id, 
-                                                'message': commit_message})
-        else:
-            return
         node.send_message_to_peers(commit_message, node.peers_list)
           
           
@@ -151,16 +160,14 @@ class PBFT(ConsensusAlgorithm):
             "view": commit_message["view"],
             "timestamp": int(time.time()),
             "client_id": node.client_node.client_node_id,
+            "seq_num": commit_message["seq_num"],
             "result": "Execution Result",
-            "digest": commit_message["digest"]
+            "digest": commit_message["digest"],
+            "node_id": node.node_id
         }
+        node.current_sequence_number = commit_message["seq_num"]
         
-        if node.processed_reply_messages == {}:
-            node.processed_reply_messages.update({'node_id_from': node.node_id, 
-                                                'message': reply_message})
-        else:
-            return
-        node.client_node.receive_reply(reply_message, self.count_of_faulty_nodes)
+        success_add_block = node.client_node.receive_reply(reply_message, self.count_of_faulty_nodes)
     
     
     def view_change(self, node: 'Node') -> None:
@@ -202,9 +209,11 @@ class PBFT(ConsensusAlgorithm):
         node.primary_node.node.is_primary = True
         original_primary.node.is_primary = False
         
+        
     def conduct_previous_view_stage(self, node: 'Node') -> None:
         self.pre_prepare(node.received_request_messages, node)
         
+
     def cancel_all_view_change_timer(self):
         for node in self.nodes:
             if node.view_change_timer:
@@ -222,14 +231,18 @@ class PBFTHandler:
         self.client_node: List['ClientNode'] = client_node
         self.primary_node = PrimaryNode(nodes[0], self.pbft_algorithm)
 
+
     def send_request_to_primary(self, request: Dict[str, Any]) -> None:
         self.primary_node.receive_request(request)
+
 
     def initialize_network(self) -> None:
         for node in self.list_of_total_nodes:
             for peer in self.list_of_total_nodes:
                 if node.node_id != peer.node_id:
                     node.peers_list.append({"node_id": peer.node_id, "client": Client(peer.host, peer.port)})
+                    
+    
     
     def stop(self) -> None:
         for node in self.list_of_total_nodes:

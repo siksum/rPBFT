@@ -55,19 +55,26 @@ class Server:
         except (BrokenPipeError, ConnectionResetError) as e:
             logging.error(f"Socket error: {e}")
         except json.JSONDecodeError as e:
-            logging.error(f"JSON decoding error: {e}")
-            logging.error(f"Partial buffer content: {buffer}")
-            logging.error(f"Error Location: {e.lineno}:{e.colno} (char {e.pos})")
+            # logging.error(f"JSON decoding error: {e}")
+            # logging.error(f"Partial buffer content: {buffer}")
+            # logging.error(f"Error Location: {e.lineno}:{e.colno} (char {e.pos})")
+            logging.error(f"JSON decoding error")
+            logging.error(f"Partial buffer content")
+            logging.error(f"Error Location")
         except Exception as e:
-            logging.error(f"Unexpected error: {e}")
-            logging.error(f"Buffer content at error: {buffer}")
-            logging.error("Traceback information:", exc_info=True)
+            # logging.error(f"Unexpected error: {e}")
+            # logging.error(f"Buffer content at error: {buffer}")
+            # logging.error("Traceback information:", exc_info=True)
+            logging.error(f"Unexpected error")
+            logging.error(f"Buffer content at error")
+            logging.error("Traceback information:")
         finally:
             try:
                 if client_socket.fileno() != -1:
                     client_socket.close()
             except Exception as e:
-                logging.error(f"Error closing client socket: {e}")
+                # logging.error(f"Error closing client socket: {e}")
+                logging.error(f"Error closing client socket")
 
 
     def broadcast(self, message: str) -> None:

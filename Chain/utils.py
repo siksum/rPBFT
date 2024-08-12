@@ -9,6 +9,7 @@ def groupby_sorted(data):
     
     return dict(grouped_data)
 
+
 def remove_duplicates(messages):
     seen = set()
     unique_messages = []
@@ -21,6 +22,7 @@ def remove_duplicates(messages):
             seen.add(key)
     
     return unique_messages
+
 
 def check_duplicate(new_message, received_messages):
     check_this = (new_message['node_id_to'], new_message['node_id_from'], new_message['message']['digest'])

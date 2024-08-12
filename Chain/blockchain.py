@@ -37,6 +37,9 @@ class Blockchain:
 
     def add_block_to_blockchain(self, data: Dict[str, Any])-> List[Block]:
         previous_block: Block = self.get_latest_block()
+        for block in self.chain:
+            if block.data == data:
+                return 
         new_block: Block = self.create_new_block(previous_block, data)
         self.chain.append(new_block)
         self.block_round = new_block.index // self.blocksize
