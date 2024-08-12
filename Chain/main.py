@@ -1,8 +1,9 @@
-from blockchain import Blockchain
-from pbft import PBFT, PBFTHandler
-from node import Node, ClientNode, PrimaryNode
-from rPBFT.Reliability import Reliability
-from rPBFT.rPBFT import rPBFT
+from Blockchain.blockchain import Blockchain
+from Consensus.PBFT.pbft import PBFT
+from Consensus.pbft_handler import PBFTHandler
+from Consensus.rPBFT.rPBFT import rPBFT
+from Consensus.rPBFT.Reliability import Reliability
+from Consensus.node import Node, ClientNode, PrimaryNode
 
 import time
 from typing import List
@@ -158,7 +159,7 @@ if __name__ == "__main__":
             pbft_test.setup_nodes()
             pbft_test.setup_faulty_nodes()
             pbft_test.initialize_network()
-            for i in range(30):
+            for i in range(1):
                 pbft_test.send_request(transaction_data= "Transaction Data "+str(i+1))
             time.sleep(1)
             pbft_test.print_blockchain()

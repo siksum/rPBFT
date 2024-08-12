@@ -1,13 +1,13 @@
 from typing import List, Dict, Any, TYPE_CHECKING
-from node import PrimaryNode, ClientNode
-from pbft import PBFTHandler
+from Consensus.node import PrimaryNode, ClientNode
+from Consensus.pbft_handler import PBFTHandler
 import time
 import hashlib
-from utils import *
+from Utils.utils import *
 import random
 
 if TYPE_CHECKING:
-    from node import Node
+    from Chain.Consensus.node import Node
 
 
 class rPBFT():

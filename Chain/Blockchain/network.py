@@ -5,7 +5,7 @@ import logging
 from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
-    from node import Node
+    from Consensus.node import Node
     
     
 class Server:

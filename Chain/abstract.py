@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any, TYPE_CHECKING
 if TYPE_CHECKING:
-    from node import Node
+    from Chain.Consensus.node import Node
     
 class ConsensusAlgorithm(ABC):
     @abstractmethod

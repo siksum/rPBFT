@@ -3,7 +3,7 @@ import time
 from typing import List, Dict, Any
 import json
 
-from block import Block
+from Blockchain.block import Block
 
 
 class Blockchain:

@@ -1,16 +1,14 @@
 import threading
 import time
 from typing import List, Dict, TYPE_CHECKING, Any
-from blockchain import Blockchain
-from network import Server, Client
+from Blockchain.blockchain import Blockchain
+from Blockchain.network import Server, Client
 import hashlib
 import sys
-import random
 
 if TYPE_CHECKING:
-    from pbft import PBFTHandler, PBFT
-    from rPBFT.rPBFT import rPBFT
-    from network import Server, Client
+    from Consensus.pbft_handler import PBFTHandler
+    from Blockchain.network import Server, Client
 
 
 def check_timeout(timer_start: float, timebase: float) :
