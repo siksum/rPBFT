@@ -74,7 +74,7 @@ def visualize_pbft(nodes, messages):
     plt.tight_layout()
     plt.show()
 
-log_text = open('output.txt', 'r').readlines()
+log_text = open('b.txt', 'r').readlines()
 
 nodes, messages = parse_log(log_text)
 visualize_pbft(nodes, messages)

@@ -4,13 +4,14 @@ from Consensus.pbft_handler import PBFTHandler
 from Consensus.rPBFT.rPBFT import rPBFT
 from Consensus.rPBFT.Reliability import Reliability
 from Consensus.node import Node, ClientNode, PrimaryNode
+from Utils.simulation import Simulator
 
 import time
 from typing import List
 import random
 import argparse
 import logging
-import sys
+from tqdm import tqdm
 
 LOCALHOST = "localhost"
 
@@ -20,7 +21,8 @@ def argument_parser():
     
     pbft_parser = subparser.add_parser('PBFT', help='Test PBFT algorithm')
     pbft_parser.add_argument('--nodes', type=int, default=100, help='Total number of nodes')
-    pbft_parser.add_argument('--faulty_nodes', type=int, default=10, help='Number of faulty nodes')
+    pbft_parser.add_argument('--model', type=str, choices=['infant', 'random', 'wearout', 'bathtub'], help='Reliability model')
+    # pbft_parser.add_argument('--faulty_nodes', type=int, default=10, help='Number of faulty nodes')
     pbft_parser.add_argument('--port', type=int, default=5300, help='Port number')
     pbft_parser.add_argument('--blocksize', type=int, default=10, help='Block size')
 
@@ -154,54 +156,101 @@ if __name__ == "__main__":
     
     try:
         args = argument_parser()
+        simulator = Simulator()
+        generate_faulty_nodes = Reliability(1000, args.nodes)
+    
+        if args.model == 'infant':
+            generate_faulty_nodes.generate_infant_mortality(400, 0.7)
+            generate_faulty_nodes.get_random_failures(generate_faulty_nodes.infant_mortality)
+            
+        elif args.model == 'random':
+            generate_faulty_nodes.generate_random_failures(0.001)
+            generate_faulty_nodes.get_random_failures(generate_faulty_nodes.random_failures)
+            
+        elif args.model == 'wearout':
+            generate_faulty_nodes.generate_wear_out(6.8, 0.1)
+            generate_faulty_nodes.get_random_failures(generate_faulty_nodes.wear_out)
+            
+        elif args.model == 'bathtub':
+            generate_faulty_nodes.generate_bathtub_curve(400, 0.7, 0.001, 6.8, 0.1)
+            generate_faulty_nodes.get_random_failures(generate_faulty_nodes.bathtub_curve)
+        
+        else:
+            logging.error("Invalid reliability model")
+        
+        latency = []
+        bps = []
+        security = []
+        
         if args.algorithm == 'PBFT':
+            count = 300
+            # generate_faulty_nodes.list_of_random_failures = [0]*1+ [1]*3 + [0]*(args.nodes-3)
+            # generate_faulty_nodes.list_of_random_failures = [0]*1+ [1]*6 + [0]*(args.nodes-7)
+            # generate_faulty_nodes.list_of_random_failures = [0]*1+ [1]*9 + [0]*(args.nodes-10)
+            generate_faulty_nodes.list_of_random_failures = [0]*1+ [1]*16 + [0]*(args.nodes-17)
+            
             start = time.time()
-            pbft_test = Test(algorithm=PBFT(), count_of_total_nodes=args.nodes, count_of_faulty_nodes=args.faulty_nodes, port=args.port, blocksize=10)
+            pbft_test = Test(algorithm=PBFT(), count_of_total_nodes=args.nodes, count_of_faulty_nodes=generate_faulty_nodes.count_of_faulty_nodes, port=args.port, blocksize=10)
             pbft_test.setup_client_nodes()
-            pbft_test.setup_nodes()
-            pbft_test.setup_faulty_nodes()
+            pbft_test.setup_rpbft_nodes(generate_faulty_nodes.list_of_random_failures)
             pbft_test.initialize_network()
-            for i in range(1):
-                pbft_test.send_request(transaction_data= "Transaction Data "+str(i+1))
+            for i in range(1, count+1):
+                if i % 10 == 0:
+                    try:
+                        index = generate_faulty_nodes.list_of_random_failures.index(1)
+                        generate_faulty_nodes.list_of_random_failures[index] = 0
+                        pbft_test.list_of_total_nodes[index].is_faulty = False
+                        print("[FAULTY NODES]", generate_faulty_nodes.list_of_random_failures)
+                    except ValueError:
+                        pass
+                consensus_start = time.time()
+                pbft_test.send_request(transaction_data= "Transaction Data "+str(i))
+                time.sleep(3)
+                consensus_finish = time.time() - consensus_start
+                latency.append(consensus_finish-3)
+                bps.append((1e+6)*len(pbft_test.blockchain.chain)/(consensus_finish-3))
             time.sleep(1)
             pbft_test.print_blockchain()
             round_time = time.time() - start
-            print("[ROUND TIME]", round_time)   
+            
+            simulator.plot(latency, list(range(count)), "pbft-latency-data-"+str(args.model)+"-"+str(args.nodes)+"-"+str(count))
+            simulator.plot(bps, list(range(count)), "pbft-bps-data-"+str(args.model)+"-"+str(args.nodes)+"-"+str(count))
+            print("[TOTAL ROUND TIME]", round_time-(3*count+1))
+            print("[TOTAL BPS]", (1e+6)*len(pbft_test.blockchain.chain)/(round_time-(3*count+1)))
+            
             
         elif args.algorithm == 'rPBFT':
+            count = 1000
+            # generate_faulty_nodes.list_of_random_failures = [0]*1+ [1]*3 + [0]*(args.nodes-4)
+            generate_faulty_nodes.list_of_random_failures = [0]*1+ [1]*6 + [0]*(args.nodes-7)
             start = time.time()
-            generate_faulty_nodes = Reliability(1000, args.nodes)
-
-            if args.model == 'infant':
-                generate_faulty_nodes.generate_infant_mortality(400, 0.7)
-                generate_faulty_nodes.get_random_failures(generate_faulty_nodes.infant_mortality)
-                
-            elif args.model == 'random':
-                generate_faulty_nodes.generate_random_failures(0.001)
-                generate_faulty_nodes.get_random_failures(generate_faulty_nodes.random_failures)
-                
-            elif args.model == 'wearout':
-                generate_faulty_nodes.generate_wear_out(6.8, 0.1)
-                generate_faulty_nodes.get_random_failures(generate_faulty_nodes.wear_out)
-                
-            elif args.model == 'bathtub':
-                generate_faulty_nodes.generate_bathtub_curve(400, 0.7, 0.001, 6.8, 0.1)
-                generate_faulty_nodes.get_random_failures(generate_faulty_nodes.bathtub_curve)
-            
-            generate_faulty_nodes.list_of_random_failures = [0] * 100
-            generate_faulty_nodes.count_of_faulty_nodes = 0
             rpbft_test = Test(algorithm=rPBFT(), count_of_total_nodes=args.nodes, count_of_faulty_nodes=generate_faulty_nodes.count_of_faulty_nodes, port=args.port, blocksize=10)
             rpbft_test.setup_client_nodes()
             rpbft_test.setup_rpbft_nodes(generate_faulty_nodes.list_of_random_failures)
             rpbft_test.initialize_network()
-            for i in range(1000):
-                rpbft_test.send_request(transaction_data= "Transaction Data "+str(i+1))
-                # time.sleep(1)
+            for i in range(1, count+1):
+                if i % 50 == 0:
+                    try:
+                        index = generate_faulty_nodes.list_of_random_failures.index(1)
+                        generate_faulty_nodes.list_of_random_failures[index] = 0
+                        rpbft_test.list_of_total_nodes[index].is_faulty = False
+                        print("[FAULTY NODES]", generate_faulty_nodes.list_of_random_failures)
+                    except ValueError:
+                        pass
+                consensus_start = time.time()
+                rpbft_test.send_request(transaction_data= "Transaction Data "+str(i))
+                time.sleep(2)
+                consensus_finish = time.time() - consensus_start
+                latency.append(consensus_finish-2)
+                bps.append((1e+6)*len(rpbft_test.blockchain.chain)/(consensus_finish-2))
             time.sleep(1)
             rpbft_test.print_blockchain()
             round_time = time.time() - start
-            print("[ROUND TIME]", round_time)
-            # print(generate_faulty_nodes.list_of_random_failures)
+            
+            simulator.plot(latency, list(range(count)), "rpbft-latency-data-"+str(args.model)+"-"+str(args.nodes)+"-"+str(count))
+            simulator.plot(bps, list(range(count)), "rpbft-bps-data-"+str(args.model)+"-"+str(args.nodes)+"-"+str(count))
+            print("[TOTAL ROUND TIME]", round_time-(2*count+1))
+            print("[TOTAL BPS]", (1e+6)*len(rpbft_test.blockchain.chain)/(round_time-(2*count+1)))
             
             
     finally:

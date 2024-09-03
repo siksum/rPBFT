@@ -1,0 +1,56 @@
+Node 1 is running.
+Node 2 is running.
+Node 3 is running.
+Node 4 is running.
+Node 5 is running.
+[Send] Client Node: 0 -> Primary Node: {'stage': 'REQUEST', 'data': 'Transaction Data 1', 'timestamp': 1723646630, 'client_id': 0}
+[Recieve] Primary Node: 1, content: {'stage': 'REQUEST', 'data': 'Transaction Data 1', 'timestamp': 1723646630, 'client_id': 0}
+[Recieve] Node: 2, content: {'stage': 'PRE-PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'data': {'stage': 'REQUEST', 'data': 'Transaction Data 1', 'timestamp': 1723646630, 'client_id': 0}, 'node_id': 1}
+[Recieve] Node: 3, content: {'stage': 'PRE-PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'data': {'stage': 'REQUEST', 'data': 'Transaction Data 1', 'timestamp': 1723646630, 'client_id': 0}, 'node_id': 1}
+[Recieve] Node: 4, content: {'stage': 'PRE-PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'data': {'stage': 'REQUEST', 'data': 'Transaction Data 1', 'timestamp': 1723646630, 'client_id': 0}, 'node_id': 1}
+[Recieve] Node: 5, content: {'stage': 'PRE-PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'data': {'stage': 'REQUEST', 'data': 'Transaction Data 1', 'timestamp': 1723646630, 'client_id': 0}, 'node_id': 1}
+[Recieve] Node: 1, content: {'stage': 'PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 2}
+[Recieve] Node: 2, content: {'stage': 'PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 3}
+[Recieve] Node: 3, content: {'stage': 'PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 2}
+[Recieve] Node: 5, content: {'stage': 'PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 2}
+[Recieve] Node: 4, content: {'stage': 'PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 2}
+[Recieve] Node: 1, content: {'stage': 'PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 3}
+[Recieve] Node: 5, content: {'stage': 'PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 3}
+[Recieve] Node: 4, content: {'stage': 'PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 3}
+[Recieve] Node: 3, content: {'stage': 'PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 4}
+[Recieve] Node: 2, content: {'stage': 'PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 4}
+[Recieve] Node: 1, content: {'stage': 'PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 4}
+[Recieve] Node: 4, content: {'stage': 'PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 5}
+[Recieve] Node: 3, content: {'stage': 'PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 5}
+[Recieve] Node: 2, content: {'stage': 'PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 5}
+[Recieve] Node: 5, content: {'stage': 'PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 4}
+[Recieve] Node: 1, content: {'stage': 'PREPARE', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 5}
+[Recieve] Node: 4, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 1}
+[Recieve] Node: 2, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 1}
+[Recieve] Node: 0, content: {'stage': 'REPLY', 'view': 1, 'timestamp': 1723646630, 'client_id': 0, 'seq_num': 0, 'result': 'Execution Result', 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 4}
+[ADD BLOCK] Client Node added block: {'stage': 'REQUEST', 'data': 'Transaction Data 1', 'timestamp': 1723646630, 'client_id': 0}
+[Recieve] Node: 0, content: {'stage': 'REPLY', 'view': 1, 'timestamp': 1723646630, 'client_id': 0, 'seq_num': 0, 'result': 'Execution Result', 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 2}
+[Recieve] Node: 3, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 1}
+[Recieve] Node: 4, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 2}
+[Recieve] Node: 2, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 5}
+[Recieve] Node: 0, content: {'stage': 'REPLY', 'view': 1, 'timestamp': 1723646630, 'client_id': 0, 'seq_num': 0, 'result': 'Execution Result', 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 3}
+[Recieve] Node: 1, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 2}
+[Recieve] Node: 4, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 5}
+[Recieve] Node: 2, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 3}
+[Recieve] Node: 0, content: {'stage': 'REPLY', 'view': 1, 'timestamp': 1723646630, 'client_id': 0, 'seq_num': 0, 'result': 'Execution Result', 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 1}
+[Recieve] Node: 3, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 2}
+[Recieve] Node: 1, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 3}
+[Recieve] Node: 5, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 1}
+[Recieve] Node: 2, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 4}
+[Recieve] Node: 0, content: {'stage': 'REPLY', 'view': 1, 'timestamp': 1723646630, 'client_id': 0, 'seq_num': 0, 'result': 'Execution Result', 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 5}
+[Recieve] Node: 3, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 5}
+[Recieve] Node: 4, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 3}
+[Recieve] Node: 1, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 5}
+[Recieve] Node: 5, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 2}
+[Recieve] Node: 3, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 4}
+[Recieve] Node: 5, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 3}
+[Recieve] Node: 1, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 4}
+[Recieve] Node: 5, content: {'stage': 'COMMIT', 'view': 1, 'seq_num': 0, 'digest': '37278bb2520757d5d99c5e452549d8f0778e36396fca5e34870b2d8ea5c04d87', 'node_id': 4}
+Block 0 [Hash: 54e09961c1eb57f2490e13929026d5c57cc539c855ca563917a508ab48f954b5], [Data: Genesis Block]
+Block 1 [Hash: 71b8999526a365ecfef3a95e2b3b041c1c505811def0df88b78c3f25c09c9297], [Data: {'stage': 'REQUEST', 'data': 'Transaction Data 1', 'timestamp': 1723646630, 'client_id': 0}]
+[ROUND TIME] 1.0053651332855225

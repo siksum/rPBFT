@@ -273,6 +273,3 @@ class ProposedMethod:
 
 
         return result
-
-
-

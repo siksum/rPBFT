@@ -4,7 +4,7 @@ from Consensus.pbft_handler import PBFTHandler
 import time
 import hashlib
 from Utils.utils import *
-import random
+import asyncio
 
 if TYPE_CHECKING:
     from Chain.Consensus.node import Node
@@ -18,19 +18,20 @@ class rPBFT():
         self.nodes: List['Node'] = []
         self.nodes_committee: List[Dict[str, Any]] = []
         self.pbft_handler: 'PBFTHandler' = None
-        self.sharing_faulty_data_count: int = 4
+        self.sharing_faulty_data_count: int = 6
         self.count_of_top_priorities: int = 0
         self.nodes_to_send_fault_data: Dict[str, Any] = {}
     
         
-    def handle_message(self, message: Dict[str, Any], node: 'Node') -> None:       
+    async def handle_message(self, message: Dict[str, Any], node: 'Node') -> None:       
         if message["stage"] == "PRE-PREPARE":
             if node.is_faulty is True:
                 return
             new_message = {'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message}
             node.received_pre_prepare_messages.append(new_message)
             print(f"[Recieve] Node: {node.node_id}, content: {message}")
-            
+
+            await asyncio.sleep(0)
             self.prepare(message, node)
             
         elif message["stage"] == "PREPARE":
@@ -49,6 +50,7 @@ class rPBFT():
             sorted_by_seqnum = groupby_sorted(node.received_prepare_messages)
             equal_seqnum = sorted_by_seqnum.get(message['seq_num'])
             
+            await asyncio.sleep(0)
             if len(equal_seqnum) >= 2 * self.count_of_faulty_nodes and node.validate_message(message, equal_seqnum) is True:
                 self.commit(message, node)
         
@@ -69,6 +71,7 @@ class rPBFT():
             sorted_by_seqnum = groupby_sorted(node.received_commit_messages)
             equal_seqnum = sorted_by_seqnum.get(message['seq_num'])
             
+            await asyncio.sleep(0)
             if len(equal_seqnum) >= (2 * self.count_of_faulty_nodes + 1) and node.validate_message(message, equal_seqnum) is True:
                 self.send_reply_to_client(message, node)
         
@@ -83,6 +86,8 @@ class rPBFT():
                 
             sorted_by_seqnum = groupby_sorted(node.received_fault_data)
             equal_seqnum = sorted_by_seqnum.get(message['seq_num'])
+            
+            await asyncio.sleep(0)
             self.calculate_priority(node, equal_seqnum)
             # print("[PRIORITY AFTER FAULT DATA RECEIVE]",node.node_id, node.sum_of_priorities)
 
@@ -165,29 +170,38 @@ class rPBFT():
         node.current_sequence_number = commit_message["seq_num"]
 
         node.client_node.receive_reply(reply_message, self.count_of_faulty_nodes)
-        if node.client_node.is_block_added[commit_message["digest"]] is True:
+        if node.client_node.is_block_added[commit_message["digest"]] is True and len(node.client_node.blockchain.chain) % 10 == 0:
             self.make_fault_data(commit_message, node)
         else:
             return
         
     
     def make_fault_data(self, reply_message: Dict[str, Any], node: 'Node') -> None:
-        fault_info = [0 for i in range(0, len(self.nodes))]
-        node.sum_of_priorities = [0 for i in range(0, len(self.nodes))]
+        fault_info = [0] * len(self.nodes)
+        node.sum_of_priorities = [0] * len(self.nodes)
         
-        prepare_set = [msg for msg in node.received_prepare_messages if msg["message"]["seq_num"] == reply_message["seq_num"]]
-        prepare_set = {(msg['node_id_from'], msg['message']['seq_num']) for msg in prepare_set}
-        commit_set = [msg for msg in node.received_commit_messages if msg["message"]["seq_num"] == reply_message["seq_num"]]
-        commit_set = {(msg['node_id_from'], msg['message']['seq_num']) for msg in commit_set}
+        # prepare_set과 commit_set의 교집합만 계산
+        prepare_set = {
+            (msg['node_id_from'], msg['message']['seq_num'])
+            for msg in node.received_prepare_messages
+            if msg["message"]["seq_num"] == reply_message["seq_num"]
+        }
+        commit_set = {
+            (msg['node_id_from'], msg['message']['seq_num'])
+            for msg in node.received_commit_messages
+            if msg["message"]["seq_num"] == reply_message["seq_num"]
+        }
         
-        common_messages = prepare_set.intersection(commit_set)
+        common_messages = prepare_set & commit_set
         
         for node_id_from, _ in common_messages:
-            fault_info[node_id_from-1] += 1
+            fault_info[node_id_from - 1] += 1
         
+        latest_block_index = node.blockchain.get_latest_block().index
+
         fault_data: Dict[str, Any] = {
             "stage": "FAULT-DATA", 
-            "block_num": node.blockchain.get_latest_block().index,
+            "block_num": latest_block_index,
             "view_num": node.current_view_number,
             "node_id": node.node_id,
             "seq_num": node.current_sequence_number,
@@ -195,7 +209,7 @@ class rPBFT():
             "fault_info": fault_info
         }
         self.share_fault_data(node, fault_data)
-        
+
         
     def share_fault_data(self, node: 'Node', fault_data) -> None:
         selected_adjacent_nodes = self.select_adjacent_nodes(self.sharing_faulty_data_count, node)
@@ -213,36 +227,35 @@ class rPBFT():
         
     
     def select_committee(self, node: 'Node') -> None:
-        if node.sum_of_priorities == []:
-            node.sum_of_priorities = [random.randint(0, len(self.nodes)) for _ in range(len(self.nodes))]
+        if not node.sum_of_priorities:
+            # 기본값으로 사용할 우선순위 리스트 설정
+            node.sum_of_priorities = [6, 0, 0, 0, 3, 4, 5, 6, 7, 8]
+            # node.sum_of_priorities = [6, 0, 0, 0, 0, 0, 0, 3, 4, 5, 6, 7, 8, 3, 4, 5, 6, 7, 8, 5]
+
+        # 자신을 제외한 우선순위 리스트 필터링 및 정렬
+        sorted_indices = sorted(
+            (i for i in range(len(node.sum_of_priorities)) if i != node.node_id),
+            key=lambda i: node.sum_of_priorities[i],
+            reverse=True
+        )
         
-        node.sum_of_priorities = [random.randint(0, len(self.nodes)) for _ in range(len(self.nodes))]
-        filtered_priorities = [(i, value) for i, value in enumerate(node.sum_of_priorities) if i != node.node_id]
-        filtered_priorities.sort(key=lambda x: x[1], reverse=True)
-        sorted_indices = [i for i, value in filtered_priorities]
-        selected_committee_node_ids = sorted_indices[:len(sorted_indices)//2+1]
+        # 상위 1/3 노드 선택
+        selected_committee_node_ids = sorted_indices[:len(sorted_indices) // 3 + 1]
         return selected_committee_node_ids
-    
-    
+
     def committee_node_list(self, node: 'Node', selected_committee_node_ids) -> None:
-        committee_node_list = []
-        for peer in node.peers_list:
-            if peer['node_id'] in selected_committee_node_ids:
-                committee_node_list.append(peer)
-        return committee_node_list
-    
-        
+        # 리스트 컴프리헨션을 사용한 간결한 필터링
+        return [peer for peer in node.peers_list if peer['node_id'] in selected_committee_node_ids]
+
     def calculate_priority(self, node: 'Node', received_fault_data: List[Dict[str, Any]]) -> None:
-        sum_of_priorities = [0 for i in range(0, len(self.nodes))]
-        for fault_data in received_fault_data:
-            sum_of_priorities = [x + y for x, y in zip(sum_of_priorities, fault_data['message']['fault_info'])]
-        if len(received_fault_data) > node.count_of_fault_data :
+        # sum_of_priorities를 한 번에 계산
+        sum_of_priorities = [sum(fault['message']['fault_info'][i] for fault in received_fault_data) 
+                            for i in range(len(self.nodes))]
+
+        # 우선순위 리스트 업데이트 조건
+        if len(received_fault_data) > node.count_of_fault_data:
             node.sum_of_priorities = sum_of_priorities
             node.count_of_fault_data = len(received_fault_data)
-            # print("[UPDATED PRIORITY]", node.node_id, node.sum_of_priorities)
-        else:
-            return 
-        
         
     def check_fault_data(self, node: 'Node') -> bool:
         if not node.hasFaultyData:

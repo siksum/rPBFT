@@ -42,7 +42,6 @@ class Server:
 
     def handle_client(self, client_socket: socket.socket) -> None:
         # client_socket.settimeout(10)
-        
         buffer = ""
         try:
             while self.running:

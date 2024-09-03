@@ -36,7 +36,7 @@ class Reliability:
         return random.choices([0, 1], weights=weights)[0]
     
     def get_weights(self, failure_rate: float) -> List[float]:
-        scaled_failure_rate = min(failure_rate * 100, 1)
+        scaled_failure_rate = min(failure_rate * 50, 1)
         success_rate = 1 - scaled_failure_rate
         return [success_rate, scaled_failure_rate]
     

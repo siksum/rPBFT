@@ -12,22 +12,18 @@ def groupby_sorted(data):
 
 def remove_duplicates(messages):
     seen = set()
-    unique_messages = []
     
-    for message in messages:
-        key = (message['node_id_to'], message['node_id_from'], message['message']['digest'])
-        
-        if key not in seen:
-            unique_messages.append(message)
-            seen.add(key)
+    unique_messages = [
+        message for message in messages
+        if not ((message['node_id_to'], message['node_id_from'], message['message']['digest']) in seen
+                or seen.add((message['node_id_to'], message['node_id_from'], message['message']['digest'])))
+    ]
     
     return unique_messages
 
-
 def check_duplicate(new_message, received_messages):
     check_this = (new_message['node_id_to'], new_message['node_id_from'], new_message['message']['digest'])
-    for message in received_messages:
-        key = (message['node_id_to'], message['node_id_from'], message['message']['digest'])
-        if key == check_this:
-            return True
-    return False
+    return any(
+        check_this == (message['node_id_to'], message['node_id_from'], message['message']['digest'])
+        for message in received_messages
+    )
