@@ -43,7 +43,7 @@ class PBFT(ConsensusAlgorithm):
                 return
             new_message = {'node_id_to': node.node_id, 'node_id_from': message['node_id'], 'message': message}
             node.received_pre_prepare_messages.append(new_message)
-            print(f"[Recieve] Node: {node.node_id}, content: {message}")
+            # print(f"[Recieve] Node: {node.node_id}, content: {message}")
 
             self.prepare(message, node)
             

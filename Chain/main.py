@@ -189,13 +189,15 @@ if __name__ == "__main__":
             # generate_faulty_nodes.list_of_random_failures = [0]*1+ [1]*9 + [0]*(args.nodes-10)
             generate_faulty_nodes.list_of_random_failures = [0]*1+ [1]*16 + [0]*(args.nodes-17)
             
+            # generate_faulty_nodes.list_of_random_failures = [0]*args.nodes
+            
             start = time.time()
             pbft_test = Test(algorithm=PBFT(), count_of_total_nodes=args.nodes, count_of_faulty_nodes=generate_faulty_nodes.count_of_faulty_nodes, port=args.port, blocksize=10)
             pbft_test.setup_client_nodes()
             pbft_test.setup_rpbft_nodes(generate_faulty_nodes.list_of_random_failures)
             pbft_test.initialize_network()
             for i in range(1, count+1):
-                if i % 10 == 0:
+                if i % 200 == 0:
                     try:
                         index = generate_faulty_nodes.list_of_random_failures.index(1)
                         generate_faulty_nodes.list_of_random_failures[index] = 0
@@ -205,18 +207,18 @@ if __name__ == "__main__":
                         pass
                 consensus_start = time.time()
                 pbft_test.send_request(transaction_data= "Transaction Data "+str(i))
-                time.sleep(3)
+                time.sleep(2)
                 consensus_finish = time.time() - consensus_start
-                latency.append(consensus_finish-3)
-                bps.append((1e+6)*len(pbft_test.blockchain.chain)/(consensus_finish-3))
+                latency.append(consensus_finish-2)
+                bps.append((1e+6)*len(pbft_test.blockchain.chain)/(consensus_finish-2))
             time.sleep(1)
             pbft_test.print_blockchain()
             round_time = time.time() - start
             
             simulator.plot(latency, list(range(count)), "pbft-latency-data-"+str(args.model)+"-"+str(args.nodes)+"-"+str(count))
             simulator.plot(bps, list(range(count)), "pbft-bps-data-"+str(args.model)+"-"+str(args.nodes)+"-"+str(count))
-            print("[TOTAL ROUND TIME]", round_time-(3*count+1))
-            print("[TOTAL BPS]", (1e+6)*len(pbft_test.blockchain.chain)/(round_time-(3*count+1)))
+            print("[TOTAL ROUND TIME]", round_time-(2*count+1))
+            print("[TOTAL BPS]", (1e+6)*len(pbft_test.blockchain.chain)/(round_time-(2*count+1)))
             
             
         elif args.algorithm == 'rPBFT':
